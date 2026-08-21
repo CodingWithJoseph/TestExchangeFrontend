@@ -1,19 +1,36 @@
-import { ArrowRight, Plus, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, Plus, Users } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 import { campaigns } from '../data/mockData'
+import { loadCampaignDrafts } from '../features/campaigns/campaignDraft'
 
 export function MyCampaignsPage() {
+  const location = useLocation()
+  const createdCampaign = (location.state as { createdCampaign?: string } | null)?.createdCampaign
+  const storedDrafts = loadCampaignDrafts().map((draft) => ({
+    id: draft.id,
+    name: draft.appName || 'Untitled campaign',
+    platform: `Android closed test · ${draft.tasks.length} contract tasks`,
+    status: draft.status,
+    testers: 0,
+    goal: draft.testerGoal,
+    daysLeft: draft.retentionDays,
+    spent: 0,
+    draftId: draft.id,
+  }))
+  const allCampaigns = [...storedDrafts, ...campaigns.map((campaign) => ({ ...campaign, draftId: undefined }))]
+
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow="DEVELOPER WORKSPACE"
         title="My campaigns"
         description="Recruit committed testers, collect feedback, and keep each closed test on track."
-        action={<button className="button button-dark"><Plus size={17} /> New campaign</button>}
+        action={<Link className="button button-dark" to="/console/my-campaigns/new"><Plus size={17} /> New campaign</Link>}
       />
+      {createdCampaign && <div className="campaign-created-banner"><CheckCircle2 size={18} /><div><strong>{createdCampaign} was saved as a campaign draft.</strong><p>The contract is ready for backend connection and tester recruitment.</p></div></div>}
       <div className="campaigns-grid">
-        {campaigns.map((campaign) => {
+        {allCampaigns.map((campaign) => {
           const percent = Math.round((campaign.testers / campaign.goal) * 100)
           return (
             <article className="campaign-card" key={campaign.id}>
@@ -29,7 +46,7 @@ export function MyCampaignsPage() {
                 <span><small>TIME REMAINING</small><strong>{campaign.daysLeft} days</strong></span>
                 <span><small>CREDITS SPENT</small><strong>{campaign.spent}</strong></span>
               </div>
-              <button className="button button-outline button-full">{campaign.status === 'Draft' ? 'Finish setup' : 'Manage campaign'} <ArrowRight size={16} /></button>
+              <Link className="button button-outline button-full" to={campaign.status === 'Draft' ? `/console/my-campaigns/new${campaign.draftId ? `?draft=${campaign.draftId}` : ''}` : '/console/my-campaigns'}>{campaign.status === 'Draft' ? 'Finish setup' : 'Manage campaign'} <ArrowRight size={16} /></Link>
             </article>
           )
         })}
@@ -37,7 +54,7 @@ export function MyCampaignsPage() {
           <span className="new-campaign-icon"><Plus size={24} /></span>
           <h2>Start a testing campaign</h2>
           <p>Define a real test brief and recruit the testers your Android app needs.</p>
-          <button className="text-button">Create campaign <ArrowRight size={15} /></button>
+          <Link className="text-button" to="/console/my-campaigns/new">Create campaign <ArrowRight size={15} /></Link>
         </article>
       </div>
       <aside className="info-banner">

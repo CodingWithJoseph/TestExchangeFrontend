@@ -8,6 +8,7 @@ The MVP console for TestExchange: a community where Android developers test real
 - Available Tests with search, filters, test briefs, and credit rewards
 - My Tests with review and completion states
 - My Campaigns with tester progress and campaign status
+- Four-step campaign contract builder covering tester fit, required tasks, evidence, review rules, and reserved credits
 - Credits with an activity ledger and one-time pack placeholders
 - Profile with tester device details and notification preferences
 
@@ -33,4 +34,6 @@ When Supabase is connected, replace the state and methods inside `src/auth/AuthC
 
 ## Current data boundary
 
-Console records are intentionally local mock data in `src/data/mockData.ts`. This keeps the initial frontend focused while the backend contract is still being designed. Credit purchases are shown as coming soon; there are no subscriptions.
+Console records are intentionally local mock data in `src/data/mockData.ts`. Campaign contracts are stored in browser storage through `src/features/campaigns/campaignDraft.ts` so the workflow can be tested before the backend contract is implemented. Credit purchases are shown as coming soon; there are no subscriptions.
+
+The automated quality pre-check shown in campaign setup is a product integration point only. It is described as an assistant for detecting incomplete or suspicious submissions, not as the final authority over credit transfers.
