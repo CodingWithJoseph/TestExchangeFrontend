@@ -46,7 +46,7 @@ export function MyCampaignsPage() {
                 <span><small>TIME REMAINING</small><strong>{campaign.daysLeft} days</strong></span>
                 <span><small>CREDITS SPENT</small><strong>{campaign.spent}</strong></span>
               </div>
-              <Link className="button button-outline button-full" to={campaign.status === 'Draft' ? `/console/my-campaigns/new${campaign.draftId ? `?draft=${campaign.draftId}` : ''}` : '/console/my-campaigns'}>{campaign.status === 'Draft' ? 'Finish setup' : 'Manage campaign'} <ArrowRight size={16} /></Link>
+              <Link className="button button-outline button-full" to={campaign.status === 'Draft' ? `/console/my-campaigns/new${campaign.draftId ? `?draft=${campaign.draftId}` : ''}` : `/console/my-campaigns/${campaign.name.toLowerCase().replaceAll(' ', '-')}`}>{campaign.status === 'Draft' ? 'Finish setup' : 'Manage campaign'} <ArrowRight size={16} /></Link>
             </article>
           )
         })}
