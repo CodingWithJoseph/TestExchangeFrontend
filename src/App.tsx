@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyCampaignsPage } from './pages/MyCampaignsPage'
 import { MyTestsPage } from './pages/MyTestsPage'
+import { NewCampaignPage } from './pages/NewCampaignPage'
 import { ProfilePage } from './pages/ProfilePage'
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
           <Route path="available-tests" element={<AvailableTestsPage />} />
           <Route path="my-tests" element={<MyTestsPage />} />
           <Route path="my-campaigns" element={<MyCampaignsPage />} />
+          <Route path="my-campaigns/new" element={<NewCampaignPage />} />
           <Route path="credits" element={<CreditsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
