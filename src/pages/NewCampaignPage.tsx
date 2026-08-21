@@ -9,13 +9,14 @@ import {
   ExternalLink,
   GripVertical,
   Info,
+  LoaderCircle,
   Plus,
   ShieldCheck,
   Smartphone,
   Trash2,
   Users,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   createCampaignDraft,
@@ -33,6 +34,12 @@ const steps = [
 ]
 
 const categories = ['Productivity', 'Finance', 'Health & fitness', 'Education', 'Travel', 'Lifestyle', 'Tools', 'Other']
+const packageNamePattern = /^([a-zA-Z]\w*\.)+[a-zA-Z]\w*$/
+const webUrlPattern = /^https?:\/\//
+
+type ValidationKey = 'appName' | 'packageName' | 'optInUrl' | 'targetAudience' | 'tasks' | 'credits' | 'agreement'
+type ValidationErrors = Partial<Record<ValidationKey, string>>
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function NewCampaignPage() {
   const navigate = useNavigate()
@@ -42,41 +49,69 @@ export function NewCampaignPage() {
   const [step, setStep] = useState(1)
   const [furthestStep, setFurthestStep] = useState(1)
   const [newTask, setNewTask] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>(draftId ? 'saved' : 'idle')
+  const [validationAttemptedSteps, setValidationAttemptedSteps] = useState<number[]>([])
   const [agreement, setAgreement] = useState(false)
+  const isFirstAutosaveRender = useRef(true)
 
   const reservedCredits = draft.testerGoal * draft.creditsPerTester
   const availableCredits = 24
 
-  const stepIsValid = useMemo(() => {
+  const stepErrors = useMemo<ValidationErrors>(() => {
     if (step === 1) {
-      return Boolean(
-        draft.appName.trim() &&
-        /^([a-zA-Z]\w*\.)+[a-zA-Z]\w*$/.test(draft.packageName.trim()) &&
-        /^https?:\/\//.test(draft.optInUrl.trim()) &&
-        draft.targetAudience.trim(),
-      )
+      const errors: ValidationErrors = {}
+      if (!draft.appName.trim()) errors.appName = 'Enter an app name.'
+      if (!draft.packageName.trim()) errors.packageName = 'Enter the package name from Play Console.'
+      else if (!packageNamePattern.test(draft.packageName.trim())) errors.packageName = 'Use a complete package name such as com.company.app.'
+      if (!draft.optInUrl.trim()) errors.optInUrl = 'Paste the closed-test opt-in link from Play Console.'
+      else if (!webUrlPattern.test(draft.optInUrl.trim())) errors.optInUrl = 'Enter a complete link beginning with https://.'
+      if (!draft.targetAudience.trim()) errors.targetAudience = 'Describe who should test this app.'
+      return errors
     }
 
     if (step === 2) {
       return draft.tasks.length >= 2 && draft.tasks.every((task) => task.trim().length > 0)
+        ? {}
+        : { tasks: 'Keep at least two complete testing tasks.' }
     }
 
     if (step === 3) {
       return draft.testerGoal >= 12 && draft.creditsPerTester >= 1 && reservedCredits <= availableCredits
+        ? {}
+        : { credits: reservedCredits > availableCredits ? `Lower the reward or add ${reservedCredits - availableCredits} credits.` : 'Use at least 12 testers and 1 credit per tester.' }
     }
 
-    return agreement
+    return agreement ? {} : { agreement: 'Accept the testing agreement before creating the campaign.' }
   }, [agreement, availableCredits, draft, reservedCredits, step])
+
+  const stepIsValid = Object.keys(stepErrors).length === 0
+  const showStepErrors = validationAttemptedSteps.includes(step)
+
+  useEffect(() => {
+    if (isFirstAutosaveRender.current) {
+      isFirstAutosaveRender.current = false
+      return
+    }
+
+    setSaveState('saving')
+    const autosaveTimer = window.setTimeout(() => {
+      try {
+        saveCampaignDraft(draft)
+        setSaveState('saved')
+      } catch {
+        setSaveState('error')
+      }
+    }, 600)
+
+    return () => window.clearTimeout(autosaveTimer)
+  }, [draft])
 
   const updateDraft = <Key extends keyof CampaignDraft>(key: Key, value: CampaignDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }))
-    setSaved(false)
   }
 
   const updateEvidence = (key: keyof CampaignEvidence, value: boolean) => {
     setDraft((current) => ({ ...current, evidence: { ...current.evidence, [key]: value } }))
-    setSaved(false)
   }
 
   const updateTask = (index: number, value: string) => {
@@ -95,24 +130,31 @@ export function NewCampaignPage() {
   }
 
   const goNext = () => {
-    if (!stepIsValid || step >= steps.length) return
+    if (!stepIsValid || step >= steps.length) {
+      setValidationAttemptedSteps((current) => current.includes(step) ? current : [...current, step])
+      return
+    }
     const nextStep = step + 1
     setStep(nextStep)
     setFurthestStep((current) => Math.max(current, nextStep))
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleSave = () => {
-    const savedDraft = saveCampaignDraft(draft)
-    setDraft(savedDraft)
-    setSaved(true)
+  const createCampaign = () => {
+    if (!stepIsValid) {
+      setValidationAttemptedSteps((current) => current.includes(step) ? current : [...current, step])
+      return
+    }
+
+    try {
+      const savedDraft = saveCampaignDraft(draft)
+      navigate('/console/my-campaigns', { state: { createdCampaign: savedDraft.appName || 'Untitled campaign' } })
+    } catch {
+      setSaveState('error')
+    }
   }
 
-  const createCampaign = () => {
-    if (!stepIsValid) return
-    const savedDraft = saveCampaignDraft(draft)
-    navigate('/console/my-campaigns', { state: { createdCampaign: savedDraft.appName || 'Untitled campaign' } })
-  }
+  const fieldHasError = (key: ValidationKey, currentValue = '') => Boolean(stepErrors[key]) && (showStepErrors || Boolean(currentValue.trim()))
 
   return (
     <div className="campaign-builder page-stack">
@@ -124,8 +166,10 @@ export function NewCampaignPage() {
           <p>Set expectations before testers join, so useful work can be reviewed fairly and credits can move with confidence.</p>
         </div>
         <div className="draft-status">
-          {saved ? <span className="save-confirmation"><CheckCircle2 size={16} /> Draft saved</span> : <span>Local draft</span>}
-          <button className="button button-outline" type="button" onClick={handleSave}>Save draft</button>
+          {saveState === 'saving' && <span className="autosave-status saving"><LoaderCircle size={16} /> Saving changes…</span>}
+          {saveState === 'saved' && <span className="autosave-status saved"><CheckCircle2 size={16} /> All changes saved</span>}
+          {saveState === 'error' && <span className="autosave-status error"><Info size={16} /> Couldn’t save locally</span>}
+          {saveState === 'idle' && <span className="autosave-status">Autosaves as you work</span>}
         </div>
       </header>
 
@@ -155,12 +199,12 @@ export function NewCampaignPage() {
               </div>
 
               <div className="builder-form-grid">
-                <label className="builder-field"><span>App name <i>Required</i></span><input value={draft.appName} onChange={(event) => updateDraft('appName', event.target.value)} placeholder="e.g. Calm Cards" /></label>
+                <label className={`builder-field ${fieldHasError('appName') ? 'has-error' : ''}`}><span>App name <i>Required</i></span><input aria-invalid={fieldHasError('appName')} value={draft.appName} onChange={(event) => updateDraft('appName', event.target.value)} placeholder="e.g. Calm Cards" />{fieldHasError('appName') && <small className="field-error">{stepErrors.appName}</small>}</label>
                 <label className="builder-field"><span>Category</span><select value={draft.category} onChange={(event) => updateDraft('category', event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
-                <label className="builder-field"><span>Package name <i>Required</i></span><input value={draft.packageName} onChange={(event) => updateDraft('packageName', event.target.value)} placeholder="com.example.myapp" /><small>Must match the package in Play Console.</small></label>
+                <label className={`builder-field ${fieldHasError('packageName', draft.packageName) ? 'has-error' : ''}`}><span>Package name <i>Required</i></span><input aria-invalid={fieldHasError('packageName', draft.packageName)} value={draft.packageName} onChange={(event) => updateDraft('packageName', event.target.value)} placeholder="com.example.myapp" /><small className={fieldHasError('packageName', draft.packageName) ? 'field-error' : ''}>{fieldHasError('packageName', draft.packageName) ? stepErrors.packageName : 'Must match the package in Play Console.'}</small></label>
                 <label className="builder-field"><span>Minimum Android version</span><select value={draft.minimumAndroid} onChange={(event) => updateDraft('minimumAndroid', event.target.value)}><option>Android 9+</option><option>Android 10+</option><option>Android 11+</option><option>Android 12+</option><option>Android 13+</option><option>Android 14+</option></select></label>
-                <label className="builder-field full"><span>Google Play closed-test opt-in link <i>Required</i></span><input type="url" value={draft.optInUrl} onChange={(event) => updateDraft('optInUrl', event.target.value)} placeholder="https://play.google.com/apps/testing/com.example.myapp" /><small>This link is only shown to signed-in testers accepted into the campaign.</small></label>
-                <label className="builder-field full"><span>Who should test this app? <i>Required</i></span><textarea rows={4} value={draft.targetAudience} onChange={(event) => updateDraft('targetAudience', event.target.value)} placeholder="Describe the intended user, their experience level, and the situations where they would use the app." /></label>
+                <label className={`builder-field full ${fieldHasError('optInUrl', draft.optInUrl) ? 'has-error' : ''}`}><span>Google Play closed-test opt-in link <i>Required</i></span><input aria-invalid={fieldHasError('optInUrl', draft.optInUrl)} type="url" value={draft.optInUrl} onChange={(event) => updateDraft('optInUrl', event.target.value)} placeholder="https://play.google.com/apps/testing/com.example.myapp" /><small className={fieldHasError('optInUrl', draft.optInUrl) ? 'field-error' : ''}>{fieldHasError('optInUrl', draft.optInUrl) ? stepErrors.optInUrl : 'This link is only shown to signed-in testers accepted into the campaign.'}</small></label>
+                <label className={`builder-field full ${fieldHasError('targetAudience') ? 'has-error' : ''}`}><span>Who should test this app? <i>Required</i></span><textarea aria-invalid={fieldHasError('targetAudience')} rows={4} value={draft.targetAudience} onChange={(event) => updateDraft('targetAudience', event.target.value)} placeholder="Describe the intended user, their experience level, and the situations where they would use the app." />{fieldHasError('targetAudience') && <small className="field-error">{stepErrors.targetAudience}</small>}</label>
                 <label className="builder-field full"><span>Device or account requirements</span><textarea rows={3} value={draft.deviceNotes} onChange={(event) => updateDraft('deviceNotes', event.target.value)} placeholder="e.g. Requires notifications enabled; no tablet support in this build." /></label>
               </div>
             </div>
@@ -191,7 +235,7 @@ export function NewCampaignPage() {
                     <div className="task-row" key={index}>
                       <GripVertical size={17} />
                       <span className="task-number">{index + 1}</span>
-                      <input value={task} onChange={(event) => updateTask(index, event.target.value)} aria-label={`Testing task ${index + 1}`} />
+                      <input className={showStepErrors && !task.trim() ? 'invalid' : ''} value={task} onChange={(event) => updateTask(index, event.target.value)} aria-label={`Testing task ${index + 1}`} />
                       <button type="button" className="icon-button" onClick={() => removeTask(index)} disabled={draft.tasks.length <= 2} aria-label={`Remove task ${index + 1}`}><Trash2 size={16} /></button>
                     </div>
                   ))}
@@ -268,11 +312,11 @@ export function NewCampaignPage() {
 
           <footer className="builder-actions">
             <button className="button button-outline" type="button" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}><ArrowLeft size={16} /> Back</button>
-            <span>{step < 4 ? 'Your progress stays in this browser until you save the draft.' : `${reservedCredits} credits will be reserved.`}</span>
+            <span className={showStepErrors && !stepIsValid ? 'validation-hint' : ''}>{showStepErrors && !stepIsValid ? Object.values(stepErrors)[0] : step < 4 ? 'Changes save automatically in this browser.' : `${reservedCredits} credits will be reserved.`}</span>
             {step < 4 ? (
-              <button className="button button-dark" type="button" onClick={goNext} disabled={!stepIsValid}>Continue <ArrowRight size={16} /></button>
+              <button className="button button-dark" type="button" onClick={goNext}>Continue <ArrowRight size={16} /></button>
             ) : (
-              <button className="button button-dark" type="button" onClick={createCampaign} disabled={!stepIsValid}><ShieldCheck size={16} /> Create campaign</button>
+              <button className="button button-dark" type="button" onClick={createCampaign}><ShieldCheck size={16} /> Create campaign</button>
             )}
           </footer>
         </section>
