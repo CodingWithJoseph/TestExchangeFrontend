@@ -12,7 +12,7 @@ const packs = [
 export function CreditsPage() {
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="YOUR BALANCE" title="Credits" description="Earn credits by testing apps or buy only what you need. No subscriptions." />
+      <PageHeader eyebrow="YOUR BALANCE" title="Credits" description="Earn credits by testing software or buy only what you need. No subscriptions." />
       <section className="credit-hero">
         <div><span>Available balance</span><strong>24</strong><small>credits</small></div>
         <div className="credit-hero-copy"><Coins size={26} /><div><strong>Your testing has real value</strong><p>One more completed test can fund one or two new testers for your own campaign.</p></div></div>

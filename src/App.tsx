@@ -1,21 +1,34 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ConsoleLayout } from './components/ConsoleLayout'
+import { PublicLayout } from './components/PublicLayout'
 import { RequireAuth } from './auth/RequireAuth'
 import { AvailableTestsPage } from './pages/AvailableTestsPage'
 import { CampaignWorkspacePage } from './pages/CampaignWorkspacePage'
+import { CommunityHomePage } from './pages/CommunityHomePage'
+import { CommunityTagsPage } from './pages/CommunityTagsPage'
 import { CreditsPage } from './pages/CreditsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyCampaignsPage } from './pages/MyCampaignsPage'
 import { MyTestsPage } from './pages/MyTestsPage'
 import { NewCampaignPage } from './pages/NewCampaignPage'
+import { HowItWorksPage } from './pages/HowItWorksPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { PublicTestDetailPage } from './pages/PublicTestDetailPage'
+import { PublicTestsPage } from './pages/PublicTestsPage'
 import { SubmissionReviewPage } from './pages/SubmissionReviewPage'
 import { TestWorkspacePage } from './pages/TestWorkspacePage'
 
 export function App() {
   return (
     <Routes>
+      <Route element={<PublicLayout />}>
+        <Route index element={<CommunityHomePage />} />
+        <Route path="tests" element={<PublicTestsPage />} />
+        <Route path="tests/:testSlug" element={<PublicTestDetailPage />} />
+        <Route path="tags" element={<CommunityTagsPage />} />
+        <Route path="how-it-works" element={<HowItWorksPage />} />
+      </Route>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/console" element={<ConsoleLayout />}>
@@ -31,7 +44,7 @@ export function App() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/console" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

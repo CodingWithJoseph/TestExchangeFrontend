@@ -285,6 +285,8 @@ type JoinableTest = {
   credits: number
   device: string
   description: string
+  retentionDays: number
+  sessionsRequired: number
 }
 
 const joinedTestsStorageKey = 'testexchange.joined-tests.v1'
@@ -314,15 +316,15 @@ export function joinAvailableTest(test: JoinableTest) {
     joined: 'Aug 21, 2026',
     dueDate: 'Sep 4, 2026',
     device: test.device,
-    retentionDays: 14,
-    sessionsRequired: 3,
+    retentionDays: test.retentionDays,
+    sessionsRequired: test.sessionsRequired,
     sessionsCompleted: 0,
     daysCompleted: 0,
-    accessNote: `${test.developer} needs to grant access before the private Play link becomes available.`,
+    accessNote: `${test.developer} needs to grant access before the private build instructions become available.`,
     contractSummary: test.description,
     tasks: [
-      { title: 'Install the closed-test build on your registered device', complete: false },
-      { title: 'Complete the requested app flow in three separate sessions', complete: false },
+      { title: 'Open the private build using the supplied access instructions', complete: false },
+      { title: `Complete the requested software flow in ${test.sessionsRequired} ${test.sessionsRequired === 1 ? 'session' : 'sessions'}`, complete: false },
       { title: 'Submit structured feedback and relevant issue details', complete: false },
     ],
     messages: [

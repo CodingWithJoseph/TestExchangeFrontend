@@ -1,4 +1,4 @@
-import { Clock3, Smartphone, Users } from 'lucide-react'
+import { Clock3, MonitorCog, Users } from 'lucide-react'
 import type { AvailableTest } from '../data/mockData'
 
 export function TestCard({ test, onStart }: { test: AvailableTest; onStart?: (test: AvailableTest) => void }) {
@@ -13,7 +13,7 @@ export function TestCard({ test, onStart }: { test: AvailableTest; onStart?: (te
             <h3>{test.name}</h3>
             {test.isNew && <span className="badge badge-new">New</span>}
           </div>
-          <p>{test.developer} · {test.category}</p>
+          <p>{test.developer} · {test.platform} · {test.category}</p>
         </div>
         <span className="credit-reward">+{test.credits} cr</span>
       </div>
@@ -23,7 +23,7 @@ export function TestCard({ test, onStart }: { test: AvailableTest; onStart?: (te
       </div>
       <div className="test-meta">
         <span><Clock3 size={15} />{test.duration}</span>
-        <span><Smartphone size={15} />{test.device}</span>
+        <span><MonitorCog size={15} />{test.device}</span>
       </div>
       <div className="tester-progress">
         <div className="progress-label">

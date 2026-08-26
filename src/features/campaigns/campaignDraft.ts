@@ -4,15 +4,21 @@ export type CampaignEvidence = {
   crashDetails: boolean
 }
 
+export type CampaignPlatform = 'Android' | 'iOS' | 'Web' | 'Desktop' | 'API'
+export type CampaignVisibility = 'Public' | 'Members only' | 'Invite only'
+
 export type CampaignDraft = {
   id: string
-  appName: string
-  packageName: string
-  optInUrl: string
+  projectName: string
+  platform: CampaignPlatform
+  visibility: CampaignVisibility
+  projectIdentifier: string
+  accessUrl: string
+  publicSummary: string
   category: string
   targetAudience: string
-  minimumAndroid: string
-  deviceNotes: string
+  minimumEnvironment: string
+  environmentNotes: string
   sessionCount: number
   retentionDays: number
   tasks: string[]
@@ -30,13 +36,16 @@ const storageKey = 'testexchange.campaign-drafts.v1'
 export function createCampaignDraft(): CampaignDraft {
   return {
     id: `campaign-${Date.now()}`,
-    appName: '',
-    packageName: '',
-    optInUrl: '',
+    projectName: '',
+    platform: 'Android',
+    visibility: 'Public',
+    projectIdentifier: '',
+    accessUrl: '',
+    publicSummary: '',
     category: 'Productivity',
     targetAudience: '',
-    minimumAndroid: 'Android 10+',
-    deviceNotes: '',
+    minimumEnvironment: 'Android 10+',
+    environmentNotes: '',
     sessionCount: 3,
     retentionDays: 14,
     tasks: [
@@ -58,10 +67,33 @@ export function createCampaignDraft(): CampaignDraft {
   }
 }
 
+type LegacyCampaignDraft = Partial<CampaignDraft> & {
+  appName?: string
+  packageName?: string
+  optInUrl?: string
+  minimumAndroid?: string
+  deviceNotes?: string
+}
+
+function normalizeCampaignDraft(stored: LegacyCampaignDraft): CampaignDraft {
+  const defaults = createCampaignDraft()
+  return {
+    ...defaults,
+    ...stored,
+    projectName: stored.projectName ?? stored.appName ?? '',
+    platform: stored.platform ?? 'Android',
+    visibility: stored.visibility ?? 'Public',
+    projectIdentifier: stored.projectIdentifier ?? stored.packageName ?? '',
+    accessUrl: stored.accessUrl ?? stored.optInUrl ?? '',
+    minimumEnvironment: stored.minimumEnvironment ?? stored.minimumAndroid ?? 'Android 10+',
+    environmentNotes: stored.environmentNotes ?? stored.deviceNotes ?? '',
+  }
+}
+
 export function loadCampaignDrafts(): CampaignDraft[] {
   try {
     const stored = window.localStorage.getItem(storageKey)
-    return stored ? (JSON.parse(stored) as CampaignDraft[]) : []
+    return stored ? (JSON.parse(stored) as LegacyCampaignDraft[]).map(normalizeCampaignDraft) : []
   } catch {
     return []
   }

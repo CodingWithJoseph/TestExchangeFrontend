@@ -10,9 +10,9 @@ import {
   GripVertical,
   Info,
   LoaderCircle,
+  MonitorCog,
   Plus,
   ShieldCheck,
-  Smartphone,
   Trash2,
   Users,
 } from 'lucide-react'
@@ -24,20 +24,30 @@ import {
   saveCampaignDraft,
   type CampaignDraft,
   type CampaignEvidence,
+  type CampaignPlatform,
 } from '../features/campaigns/campaignDraft'
 
 const steps = [
-  { id: 1, label: 'App & audience', shortLabel: 'App' },
+  { id: 1, label: 'Project & audience', shortLabel: 'Project' },
   { id: 2, label: 'Testing contract', shortLabel: 'Contract' },
   { id: 3, label: 'Evidence & credits', shortLabel: 'Credits' },
   { id: 4, label: 'Review', shortLabel: 'Review' },
 ]
 
 const categories = ['Productivity', 'Finance', 'Health & fitness', 'Education', 'Travel', 'Lifestyle', 'Tools', 'Other']
+const platforms: CampaignPlatform[] = ['Android', 'iOS', 'Web', 'Desktop', 'API']
 const packageNamePattern = /^([a-zA-Z]\w*\.)+[a-zA-Z]\w*$/
 const webUrlPattern = /^https?:\/\//
 
-type ValidationKey = 'appName' | 'packageName' | 'optInUrl' | 'targetAudience' | 'tasks' | 'credits' | 'agreement'
+const platformFields: Record<CampaignPlatform, { identifierLabel: string; identifierPlaceholder: string; identifierHelp: string; accessLabel: string; accessPlaceholder: string; environmentLabel: string; environments: string[] }> = {
+  Android: { identifierLabel: 'Package name', identifierPlaceholder: 'com.example.myapp', identifierHelp: 'Must match the package in Play Console.', accessLabel: 'Google Play closed-test opt-in link', accessPlaceholder: 'https://play.google.com/apps/testing/com.example.myapp', environmentLabel: 'Minimum Android version', environments: ['Android 9+', 'Android 10+', 'Android 11+', 'Android 12+', 'Android 13+', 'Android 14+'] },
+  iOS: { identifierLabel: 'Bundle identifier', identifierPlaceholder: 'com.example.myapp', identifierHelp: 'Optional identifier for the TestFlight build.', accessLabel: 'Private TestFlight invitation link', accessPlaceholder: 'https://testflight.apple.com/join/example', environmentLabel: 'Minimum iOS version', environments: ['iOS 16+', 'iOS 17+', 'iOS 18+'] },
+  Web: { identifierLabel: 'Build or environment', identifierPlaceholder: 'staging · v0.8', identifierHelp: 'Optional label that helps identify the tested build.', accessLabel: 'Private test URL', accessPlaceholder: 'https://staging.example.com', environmentLabel: 'Supported browsers', environments: ['Modern browsers', 'Chrome or Edge', 'Safari', 'Firefox'] },
+  Desktop: { identifierLabel: 'Build or version', identifierPlaceholder: 'v0.8.0-beta', identifierHelp: 'Optional label for the downloadable build.', accessLabel: 'Private download or access link', accessPlaceholder: 'https://example.com/private-build', environmentLabel: 'Supported operating systems', environments: ['Windows 11+', 'macOS 14+', 'Windows and macOS', 'Linux'] },
+  API: { identifierLabel: 'API version', identifierPlaceholder: 'v1 staging', identifierHelp: 'Optional version or environment identifier.', accessLabel: 'Documentation or test endpoint', accessPlaceholder: 'https://api.example.com/docs', environmentLabel: 'Required tooling', environments: ['Any REST client', 'Command line', 'JavaScript or TypeScript', 'Python'] },
+}
+
+type ValidationKey = 'projectName' | 'projectIdentifier' | 'accessUrl' | 'publicSummary' | 'targetAudience' | 'tasks' | 'credits' | 'agreement'
 type ValidationErrors = Partial<Record<ValidationKey, string>>
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -56,16 +66,19 @@ export function NewCampaignPage() {
 
   const reservedCredits = draft.testerGoal * draft.creditsPerTester
   const availableCredits = 24
+  const platformField = platformFields[draft.platform]
+  const minimumTesterGoal = draft.platform === 'Android' ? 12 : 1
 
   const stepErrors = useMemo<ValidationErrors>(() => {
     if (step === 1) {
       const errors: ValidationErrors = {}
-      if (!draft.appName.trim()) errors.appName = 'Enter an app name.'
-      if (!draft.packageName.trim()) errors.packageName = 'Enter the package name from Play Console.'
-      else if (!packageNamePattern.test(draft.packageName.trim())) errors.packageName = 'Use a complete package name such as com.company.app.'
-      if (!draft.optInUrl.trim()) errors.optInUrl = 'Paste the closed-test opt-in link from Play Console.'
-      else if (!webUrlPattern.test(draft.optInUrl.trim())) errors.optInUrl = 'Enter a complete link beginning with https://.'
-      if (!draft.targetAudience.trim()) errors.targetAudience = 'Describe who should test this app.'
+      if (!draft.projectName.trim()) errors.projectName = 'Enter a project name.'
+      if (draft.platform === 'Android' && !draft.projectIdentifier.trim()) errors.projectIdentifier = 'Enter the package name from Play Console.'
+      else if (draft.platform === 'Android' && !packageNamePattern.test(draft.projectIdentifier.trim())) errors.projectIdentifier = 'Use a complete package name such as com.company.app.'
+      if (!draft.accessUrl.trim()) errors.accessUrl = 'Enter the private test access link.'
+      else if (!webUrlPattern.test(draft.accessUrl.trim())) errors.accessUrl = 'Enter a complete link beginning with https://.'
+      if (!draft.publicSummary.trim()) errors.publicSummary = 'Write a short recruitment brief for eligible testers.'
+      if (!draft.targetAudience.trim()) errors.targetAudience = 'Describe who should test this project.'
       return errors
     }
 
@@ -76,9 +89,9 @@ export function NewCampaignPage() {
     }
 
     if (step === 3) {
-      return draft.testerGoal >= 12 && draft.creditsPerTester >= 1 && reservedCredits <= availableCredits
+      return draft.testerGoal >= minimumTesterGoal && draft.creditsPerTester >= 1 && reservedCredits <= availableCredits
         ? {}
-        : { credits: reservedCredits > availableCredits ? `Lower the reward or add ${reservedCredits - availableCredits} credits.` : 'Use at least 12 testers and 1 credit per tester.' }
+        : { credits: reservedCredits > availableCredits ? `Lower the reward or add ${reservedCredits - availableCredits} credits.` : `Use at least ${minimumTesterGoal} ${minimumTesterGoal === 1 ? 'tester' : 'testers'} and 1 credit per tester.` }
     }
 
     return agreement ? {} : { agreement: 'Accept the testing agreement before creating the campaign.' }
@@ -108,6 +121,16 @@ export function NewCampaignPage() {
 
   const updateDraft = <Key extends keyof CampaignDraft>(key: Key, value: CampaignDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updatePlatform = (platform: CampaignPlatform) => {
+    setDraft((current) => ({
+      ...current,
+      platform,
+      minimumEnvironment: platformFields[platform].environments[0],
+      testerGoal: platform === 'Android' ? 12 : 5,
+      retentionDays: platform === 'Android' ? 14 : 1,
+    }))
   }
 
   const updateEvidence = (key: keyof CampaignEvidence, value: boolean) => {
@@ -148,7 +171,7 @@ export function NewCampaignPage() {
 
     try {
       const savedDraft = saveCampaignDraft(draft)
-      navigate('/console/my-campaigns', { state: { createdCampaign: savedDraft.appName || 'Untitled campaign' } })
+      navigate('/console/my-campaigns', { state: { createdCampaign: savedDraft.projectName || 'Untitled campaign' } })
     } catch {
       setSaveState('error')
     }
@@ -194,18 +217,21 @@ export function NewCampaignPage() {
           {step === 1 && (
             <div className="builder-step-content">
               <div className="builder-section-heading">
-                <span className="builder-heading-icon"><Smartphone size={19} /></span>
-                <div><span>STEP 1 OF 4</span><h2>App and tester fit</h2><p>Give testers enough context to decide whether they can test your app well.</p></div>
+                <span className="builder-heading-icon"><MonitorCog size={19} /></span>
+                <div><span>STEP 1 OF 4</span><h2>Project and tester fit</h2><p>Give testers enough context to decide whether they can test your software well.</p></div>
               </div>
 
               <div className="builder-form-grid">
-                <label className={`builder-field ${fieldHasError('appName') ? 'has-error' : ''}`}><span>App name <i>Required</i></span><input aria-invalid={fieldHasError('appName')} value={draft.appName} onChange={(event) => updateDraft('appName', event.target.value)} placeholder="e.g. Calm Cards" />{fieldHasError('appName') && <small className="field-error">{stepErrors.appName}</small>}</label>
+                <label className={`builder-field ${fieldHasError('projectName') ? 'has-error' : ''}`}><span>Project name <i>Required</i></span><input aria-invalid={fieldHasError('projectName')} value={draft.projectName} onChange={(event) => updateDraft('projectName', event.target.value)} placeholder="e.g. Calm Cards" />{fieldHasError('projectName') && <small className="field-error">{stepErrors.projectName}</small>}</label>
+                <label className="builder-field"><span>Software platform</span><select value={draft.platform} onChange={(event) => updatePlatform(event.target.value as CampaignPlatform)}>{platforms.map((platform) => <option key={platform}>{platform}</option>)}</select></label>
                 <label className="builder-field"><span>Category</span><select value={draft.category} onChange={(event) => updateDraft('category', event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
-                <label className={`builder-field ${fieldHasError('packageName', draft.packageName) ? 'has-error' : ''}`}><span>Package name <i>Required</i></span><input aria-invalid={fieldHasError('packageName', draft.packageName)} value={draft.packageName} onChange={(event) => updateDraft('packageName', event.target.value)} placeholder="com.example.myapp" /><small className={fieldHasError('packageName', draft.packageName) ? 'field-error' : ''}>{fieldHasError('packageName', draft.packageName) ? stepErrors.packageName : 'Must match the package in Play Console.'}</small></label>
-                <label className="builder-field"><span>Minimum Android version</span><select value={draft.minimumAndroid} onChange={(event) => updateDraft('minimumAndroid', event.target.value)}><option>Android 9+</option><option>Android 10+</option><option>Android 11+</option><option>Android 12+</option><option>Android 13+</option><option>Android 14+</option></select></label>
-                <label className={`builder-field full ${fieldHasError('optInUrl', draft.optInUrl) ? 'has-error' : ''}`}><span>Google Play closed-test opt-in link <i>Required</i></span><input aria-invalid={fieldHasError('optInUrl', draft.optInUrl)} type="url" value={draft.optInUrl} onChange={(event) => updateDraft('optInUrl', event.target.value)} placeholder="https://play.google.com/apps/testing/com.example.myapp" /><small className={fieldHasError('optInUrl', draft.optInUrl) ? 'field-error' : ''}>{fieldHasError('optInUrl', draft.optInUrl) ? stepErrors.optInUrl : 'This link is only shown to signed-in testers accepted into the campaign.'}</small></label>
-                <label className={`builder-field full ${fieldHasError('targetAudience') ? 'has-error' : ''}`}><span>Who should test this app? <i>Required</i></span><textarea aria-invalid={fieldHasError('targetAudience')} rows={4} value={draft.targetAudience} onChange={(event) => updateDraft('targetAudience', event.target.value)} placeholder="Describe the intended user, their experience level, and the situations where they would use the app." />{fieldHasError('targetAudience') && <small className="field-error">{stepErrors.targetAudience}</small>}</label>
-                <label className="builder-field full"><span>Device or account requirements</span><textarea rows={3} value={draft.deviceNotes} onChange={(event) => updateDraft('deviceNotes', event.target.value)} placeholder="e.g. Requires notifications enabled; no tablet support in this build." /></label>
+                <label className={`builder-field ${fieldHasError('projectIdentifier', draft.projectIdentifier) ? 'has-error' : ''}`}><span>{platformField.identifierLabel} {draft.platform === 'Android' && <i>Required</i>}</span><input aria-invalid={fieldHasError('projectIdentifier', draft.projectIdentifier)} value={draft.projectIdentifier} onChange={(event) => updateDraft('projectIdentifier', event.target.value)} placeholder={platformField.identifierPlaceholder} /><small className={fieldHasError('projectIdentifier', draft.projectIdentifier) ? 'field-error' : ''}>{fieldHasError('projectIdentifier', draft.projectIdentifier) ? stepErrors.projectIdentifier : platformField.identifierHelp}</small></label>
+                <label className="builder-field"><span>{platformField.environmentLabel}</span><select value={draft.minimumEnvironment} onChange={(event) => updateDraft('minimumEnvironment', event.target.value)}>{platformField.environments.map((environment) => <option key={environment}>{environment}</option>)}</select></label>
+                <label className="builder-field"><span>Listing visibility</span><select value={draft.visibility} onChange={(event) => updateDraft('visibility', event.target.value as CampaignDraft['visibility'])}><option>Public</option><option>Members only</option><option>Invite only</option></select><small>Private test materials are never included in listings.</small></label>
+                <label className={`builder-field ${fieldHasError('publicSummary') ? 'has-error' : ''}`}><span>Recruitment brief <i>Required</i></span><textarea aria-invalid={fieldHasError('publicSummary')} rows={3} value={draft.publicSummary} onChange={(event) => updateDraft('publicSummary', event.target.value)} placeholder="Describe the general problem and testing goal without revealing private implementation details." />{fieldHasError('publicSummary') ? <small className="field-error">{stepErrors.publicSummary}</small> : <small>This is the only testing description included in the public or member listing.</small>}</label>
+                <label className={`builder-field full ${fieldHasError('accessUrl', draft.accessUrl) ? 'has-error' : ''}`}><span>{platformField.accessLabel} <i>Required</i></span><input aria-invalid={fieldHasError('accessUrl', draft.accessUrl)} type="url" value={draft.accessUrl} onChange={(event) => updateDraft('accessUrl', event.target.value)} placeholder={platformField.accessPlaceholder} /><small className={fieldHasError('accessUrl', draft.accessUrl) ? 'field-error' : ''}>{fieldHasError('accessUrl', draft.accessUrl) ? stepErrors.accessUrl : 'Private access is shown only to signed-in testers accepted into the campaign.'}</small></label>
+                <label className={`builder-field full ${fieldHasError('targetAudience') ? 'has-error' : ''}`}><span>Who should test this project? <i>Required</i></span><textarea aria-invalid={fieldHasError('targetAudience')} rows={4} value={draft.targetAudience} onChange={(event) => updateDraft('targetAudience', event.target.value)} placeholder="Describe the intended user, their experience level, and the situation where they would use the software." />{fieldHasError('targetAudience') && <small className="field-error">{stepErrors.targetAudience}</small>}</label>
+                <label className="builder-field full"><span>Environment or account requirements</span><textarea rows={3} value={draft.environmentNotes} onChange={(event) => updateDraft('environmentNotes', event.target.value)} placeholder="e.g. Requires a desktop browser and access to two email addresses." /></label>
               </div>
             </div>
           )}
@@ -217,19 +243,26 @@ export function NewCampaignPage() {
                 <div><span>STEP 2 OF 4</span><h2>Testing contract</h2><p>Define the work before a tester accepts it. Requirements cannot be changed retroactively.</p></div>
               </div>
 
-              <aside className="google-baseline-note">
-                <Info size={18} />
-                <div><strong>Google Play baseline</strong><p>Affected personal accounts currently need at least 12 testers opted in continuously for 14 days. Google also asks about feature coverage, realistic usage, collected feedback, and changes made.</p></div>
-                <a href="https://support.google.com/googleplay/android-developer/answer/14151465?hl=en" target="_blank" rel="noreferrer">Official guidance <ExternalLink size={13} /></a>
-              </aside>
+              {draft.platform === 'Android' ? (
+                <aside className="google-baseline-note">
+                  <Info size={18} />
+                  <div><strong>Google Play closed-testing template</strong><p>This template uses a 12-tester goal and 14-day participation period. TestExchange helps document the work but does not guarantee production approval.</p></div>
+                  <a href="https://support.google.com/googleplay/android-developer/answer/14151465?hl=en" target="_blank" rel="noreferrer">Official guidance <ExternalLink size={13} /></a>
+                </aside>
+              ) : (
+                <aside className="google-baseline-note neutral">
+                  <Info size={18} />
+                  <div><strong>{draft.platform} testing contract</strong><p>Choose the participation period and tester count that fit the work. Requirements become fixed once a tester accepts.</p></div>
+                </aside>
+              )}
 
               <div className="contract-schedule">
-                <label className="builder-field"><span>Sessions per tester</span><select value={draft.sessionCount} onChange={(event) => updateDraft('sessionCount', Number(event.target.value))}><option value={2}>2 sessions</option><option value={3}>3 sessions</option><option value={4}>4 sessions</option><option value={5}>5 sessions</option></select><small>A TestExchange contract setting—not a number specified by Google.</small></label>
-                <label className="builder-field"><span>Continuous opt-in period</span><div className="readonly-field"><strong>{draft.retentionDays} days</strong><span>Google baseline</span></div><small>Credits remain pending until retention is confirmed.</small></label>
+                <label className="builder-field"><span>Sessions per tester</span><select value={draft.sessionCount} onChange={(event) => updateDraft('sessionCount', Number(event.target.value))}><option value={1}>1 session</option><option value={2}>2 sessions</option><option value={3}>3 sessions</option><option value={4}>4 sessions</option><option value={5}>5 sessions</option></select><small>Use separate sessions only when returning later matters to the test.</small></label>
+                <label className="builder-field"><span>{draft.platform === 'Android' ? 'Continuous participation period' : 'Testing period'}</span>{draft.platform === 'Android' ? <div className="readonly-field"><strong>{draft.retentionDays} days</strong><span>Android template</span></div> : <select value={draft.retentionDays} onChange={(event) => updateDraft('retentionDays', Number(event.target.value))}><option value={1}>1 day</option><option value={3}>3 days</option><option value={7}>7 days</option><option value={14}>14 days</option></select>}<small>Credits remain pending until the agreed period and work are complete.</small></label>
               </div>
 
               <div className="task-builder">
-                <div className="task-builder-header"><div><strong>Required testing tasks</strong><p>Cover the features you will discuss in your production-access application.</p></div><span>{draft.tasks.length} tasks</span></div>
+                <div className="task-builder-header"><div><strong>Required testing tasks</strong><p>Describe observable workflows that can be reviewed fairly after submission.</p></div><span>{draft.tasks.length} tasks</span></div>
                 <div className="task-list">
                   {draft.tasks.map((task, index) => (
                     <div className="task-row" key={index}>
@@ -248,7 +281,7 @@ export function NewCampaignPage() {
 
               <section className="feedback-prompts">
                 <div><strong>Structured feedback included</strong><p>Every tester will answer these questions after completing the tasks.</p></div>
-                <ol><li>What worked as expected, and what felt confusing?</li><li>Which problems, crashes, or unexpected behavior did you encounter?</li><li>Would your real usage differ from this test? If so, how?</li><li>What should change before this app is released?</li></ol>
+                <ol><li>What worked as expected, and what felt confusing?</li><li>Which problems, crashes, or unexpected behavior did you encounter?</li><li>Would your real usage differ from this test? If so, how?</li><li>What should change before this software is released?</li></ol>
               </section>
             </div>
           )}
@@ -278,7 +311,7 @@ export function NewCampaignPage() {
               </label>
 
               <div className="builder-form-grid compact">
-                <label className="builder-field"><span>Tester goal</span><input type="number" min={12} max={100} value={draft.testerGoal} onChange={(event) => updateDraft('testerGoal', Number(event.target.value))} /><small>Minimum 12 for the current Google baseline.</small></label>
+                <label className="builder-field"><span>Tester goal</span><input type="number" min={minimumTesterGoal} max={100} value={draft.testerGoal} onChange={(event) => updateDraft('testerGoal', Number(event.target.value))} /><small>{draft.platform === 'Android' ? 'The Android closed-testing template starts at 12.' : 'Choose the number of independent perspectives this test needs.'}</small></label>
                 <label className="builder-field"><span>Credits per tester</span><select value={draft.creditsPerTester} onChange={(event) => updateDraft('creditsPerTester', Number(event.target.value))}><option value={1}>1 credit</option><option value={2}>2 credits</option><option value={3}>3 credits</option><option value={4}>4 credits</option><option value={5}>5 credits</option></select><small>Reserved now; released after approved completion.</small></label>
                 <label className="builder-field"><span>Developer review window</span><select value={draft.reviewWindowHours} onChange={(event) => updateDraft('reviewWindowHours', Number(event.target.value))}><option value={24}>24 hours</option><option value={48}>48 hours</option><option value={72}>72 hours</option></select><small>Late reviews move to dispute protection.</small></label>
               </div>
@@ -295,18 +328,19 @@ export function NewCampaignPage() {
               </div>
 
               <section className="contract-preview">
-                <div className="contract-preview-head"><span className="app-icon mint">{draft.appName.slice(0, 2).toUpperCase() || 'AP'}</span><div><span>ANDROID CLOSED TEST</span><h3>{draft.appName || 'Untitled app'}</h3><p>{draft.packageName || 'Package name not provided'} · {draft.minimumAndroid}</p></div><span className="status-pill draft">Draft</span></div>
+                <div className="contract-preview-head"><span className="app-icon mint">{draft.projectName.slice(0, 2).toUpperCase() || 'PR'}</span><div><span>{draft.platform.toUpperCase()} SOFTWARE TEST</span><h3>{draft.projectName || 'Untitled project'}</h3><p>{draft.projectIdentifier || 'Build identifier not provided'} · {draft.minimumEnvironment}</p></div><span className="status-pill draft">Draft</span></div>
                 <div className="contract-preview-grid">
-                  <div><span><Users size={15} /> TESTER COMMITMENT</span><strong>{draft.sessionCount} sessions across {draft.retentionDays} days</strong><p>Remain opted in continuously and complete all listed tasks.</p></div>
+                  <div><span><Users size={15} /> TESTER COMMITMENT</span><strong>{draft.sessionCount} {draft.sessionCount === 1 ? 'session' : 'sessions'} across {draft.retentionDays} {draft.retentionDays === 1 ? 'day' : 'days'}</strong><p>Maintain access as required and complete all listed tasks.</p></div>
                   <div><span><CircleDollarSign size={15} /> REWARD</span><strong>{draft.creditsPerTester} credits per tester</strong><p>{reservedCredits} credits reserved for {draft.testerGoal} completed contracts.</p></div>
                   <div><span><ClipboardCheck size={15} /> SUBMISSION</span><strong>Tasks + structured feedback</strong><p>{draft.evidence.screenshots ? 'Screenshots, ' : ''}{draft.evidence.featureChecklist ? 'feature checklist, ' : ''}and issue details when relevant.</p></div>
                   <div><span><Bot size={15} /> QUALITY REVIEW</span><strong>{draft.aiPrecheckEnabled ? 'Automated pre-check + developer review' : 'Developer review'}</strong><p>Developer response due within {draft.reviewWindowHours} hours.</p></div>
                 </div>
                 <div className="contract-task-preview"><strong>Required tasks</strong><ol>{draft.tasks.map((task) => <li key={task}>{task}</li>)}</ol></div>
-                <div className="contract-audience"><strong>Intended tester</strong><p>{draft.targetAudience}</p>{draft.deviceNotes && <small>{draft.deviceNotes}</small>}</div>
+                <div className="contract-audience"><strong>{draft.visibility} recruitment brief</strong><p>{draft.publicSummary}</p><small>Only this summary is used for discovery. The contract and access details stay private.</small></div>
+                <div className="contract-audience"><strong>Intended tester</strong><p>{draft.targetAudience}</p>{draft.environmentNotes && <small>{draft.environmentNotes}</small>}</div>
               </section>
 
-              <label className="agreement-row"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box"><Check size={14} /></span><div><strong>I agree to review testers against this contract.</strong><p>I understand that requirements cannot be added after testers join and that TestExchange does not guarantee Google Play production approval.</p></div></label>
+              <label className="agreement-row"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box"><Check size={14} /></span><div><strong>I agree to review testers against this contract.</strong><p>I understand that requirements cannot be added after testers join and that TestExchange rewards testing work rather than ratings, promotion, or platform approval.</p></div></label>
             </div>
           )}
 
@@ -323,15 +357,15 @@ export function NewCampaignPage() {
 
         <aside className="panel builder-summary">
           <span className="section-kicker">CAMPAIGN SUMMARY</span>
-          <h2>{draft.appName || 'Untitled campaign'}</h2>
-          <p>{draft.category} · {draft.minimumAndroid}</p>
+          <h2>{draft.projectName || 'Untitled campaign'}</h2>
+          <p>{draft.platform} · {draft.category} · {draft.minimumEnvironment}</p>
           <div className="summary-credit-row"><span>Credits available</span><strong>{availableCredits}</strong></div>
           <div className="summary-credit-row"><span>Credits to reserve</span><strong className={reservedCredits > availableCredits ? 'negative' : ''}>{reservedCredits}</strong></div>
           <div className="summary-divider" />
           <ul>
             <li><Users size={15} /><span><strong>{draft.testerGoal} testers</strong><small>Campaign goal</small></span></li>
             <li><ClipboardCheck size={15} /><span><strong>{draft.tasks.length} required tasks</strong><small>{draft.sessionCount} sessions each</small></span></li>
-            <li><ShieldCheck size={15} /><span><strong>{draft.retentionDays}-day retention</strong><small>Continuous opt-in</small></span></li>
+            <li><ShieldCheck size={15} /><span><strong>{draft.retentionDays}-day period</strong><small>{draft.platform === 'Android' ? 'Continuous participation' : 'Testing window'}</small></span></li>
             <li><Bot size={15} /><span><strong>{draft.aiPrecheckEnabled ? 'Quality pre-check on' : 'Manual review only'}</strong><small>Developer decides or dispute escalates</small></span></li>
           </ul>
           {reservedCredits > availableCredits ? (
