@@ -1,4 +1,4 @@
-import { CheckCircle2, Smartphone } from 'lucide-react'
+import { CheckCircle2, MonitorCog } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { PageHeader } from '../components/PageHeader'
@@ -15,7 +15,7 @@ export function ProfilePage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Keep your tester details accurate so you receive relevant app testing tasks." />
+      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Keep your testing environments accurate so you receive relevant software testing tasks." />
       <form className="profile-layout" onSubmit={saveProfile}>
         <section className="panel form-panel">
           <div className="form-section-heading"><div><span className="avatar large-avatar">JD</span><div><h2>{user?.name}</h2><p>Member since August 2026</p></div></div><span className="verified-label"><CheckCircle2 size={15} /> Email verified</span></div>
@@ -29,13 +29,13 @@ export function ProfilePage() {
         </section>
         <aside className="profile-side">
           <section className="panel device-panel">
-            <div className="form-section-heading"><div><span className="round-icon"><Smartphone size={18} /></span><div><h2>Testing device</h2><p>Used to match compatible tests</p></div></div></div>
-            <label><span>Device</span><input defaultValue="Google Pixel 8" /></label>
-            <label><span>Android version</span><select defaultValue="Android 16"><option>Android 16</option><option>Android 15</option><option>Android 14</option><option>Android 13</option></select></label>
+            <div className="form-section-heading"><div><span className="round-icon"><MonitorCog size={18} /></span><div><h2>Primary testing environment</h2><p>Used to match compatible tests</p></div></div></div>
+            <label><span>Platform</span><select defaultValue="Android"><option>Android</option><option>iOS</option><option>Web</option><option>Desktop</option><option>API</option></select></label>
+            <label><span>Environment details</span><input defaultValue="Google Pixel 8 · Android 16" /></label>
           </section>
           <section className="panel preference-panel">
             <h2>Notifications</h2>
-            <label className="toggle-row"><span><strong>New test matches</strong><small>Apps that match your device</small></span><input type="checkbox" defaultChecked /><i /></label>
+            <label className="toggle-row"><span><strong>New test matches</strong><small>Projects that match your environments</small></span><input type="checkbox" defaultChecked /><i /></label>
             <label className="toggle-row"><span><strong>Campaign updates</strong><small>Tester joins and new feedback</small></span><input type="checkbox" defaultChecked /><i /></label>
           </section>
         </aside>

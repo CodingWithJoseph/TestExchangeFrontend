@@ -9,8 +9,8 @@ export function MyCampaignsPage() {
   const createdCampaign = (location.state as { createdCampaign?: string } | null)?.createdCampaign
   const storedDrafts = loadCampaignDrafts().map((draft) => ({
     id: draft.id,
-    name: draft.appName || 'Untitled campaign',
-    platform: `Android closed test · ${draft.tasks.length} contract tasks`,
+    name: draft.projectName || 'Untitled campaign',
+    platform: `${draft.platform} test · ${draft.tasks.length} contract tasks`,
     status: draft.status,
     testers: 0,
     goal: draft.testerGoal,
@@ -25,7 +25,7 @@ export function MyCampaignsPage() {
       <PageHeader
         eyebrow="DEVELOPER WORKSPACE"
         title="My campaigns"
-        description="Recruit committed testers, collect feedback, and keep each closed test on track."
+        description="Recruit committed testers, collect feedback, and keep every software test on track."
         action={<Link className="button button-dark" to="/console/my-campaigns/new"><Plus size={17} /> New campaign</Link>}
       />
       {createdCampaign && <div className="campaign-created-banner"><CheckCircle2 size={18} /><div><strong>{createdCampaign} was saved as a campaign draft.</strong><p>The contract is ready for backend connection and tester recruitment.</p></div></div>}
@@ -53,7 +53,7 @@ export function MyCampaignsPage() {
         <article className="campaign-card new-campaign">
           <span className="new-campaign-icon"><Plus size={24} /></span>
           <h2>Start a testing campaign</h2>
-          <p>Define a real test brief and recruit the testers your Android app needs.</p>
+          <p>Define a real test brief and recruit the testers your software project needs.</p>
           <Link className="text-button" to="/console/my-campaigns/new">Create campaign <ArrowRight size={15} /></Link>
         </article>
       </div>

@@ -10,7 +10,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="FRIDAY, AUGUST 21"
         title="Good morning, Joseph"
-        description="Keep testing real apps to earn credits and move your campaign forward."
+        description="Keep testing real software to earn credits and move your campaign forward."
         action={<Link className="button button-dark" to="/console/available-tests"><FlaskConical size={17} /> Find a test</Link>}
       />
 
@@ -18,7 +18,7 @@ export function DashboardPage() {
         <StatCard label="Available credits" value="24" detail="Enough for 12 testers" icon={BadgeDollarSign} tone="green" />
         <StatCard label="Tests completed" value="7" detail="3 approved this month" icon={CircleCheckBig} tone="purple" />
         <StatCard label="Active campaigns" value="1" detail="Calm Cards · 8/12" icon={Rocket} tone="orange" />
-        <StatCard label="Testers helped" value="19" detail="Across 7 apps" icon={Users} tone="blue" />
+        <StatCard label="Testers helped" value="19" detail="Across 7 projects" icon={Users} tone="blue" />
       </section>
 
       <div className="dashboard-grid">

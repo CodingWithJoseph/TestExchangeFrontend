@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 import { TestCard } from '../components/TestCard'
 import { availableTests, type AvailableTest } from '../data/mockData'
@@ -9,9 +9,10 @@ import { joinAvailableTest } from '../features/testing/testingWorkflow'
 const filters = ['All tests', 'Quick tests', 'Highest reward', 'New']
 
 export function AvailableTestsPage() {
+  const [searchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All tests')
-  const [selected, setSelected] = useState<AvailableTest | null>(null)
+  const [selected, setSelected] = useState<AvailableTest | null>(() => availableTests.find((test) => test.slug === searchParams.get('test')) ?? null)
   const [agreement, setAgreement] = useState(false)
   const navigate = useNavigate()
 
@@ -28,7 +29,7 @@ export function AvailableTestsPage() {
 
   const filteredTests = useMemo(() => {
     let tests = availableTests.filter((test) =>
-      `${test.name} ${test.category} ${test.tags.join(' ')}`.toLowerCase().includes(query.toLowerCase()),
+      `${test.name} ${test.platform} ${test.category} ${test.tags.join(' ')}`.toLowerCase().includes(query.toLowerCase()),
     )
     if (filter === 'Quick tests') tests = tests.filter((test) => Number.parseInt(test.duration) <= 15)
     if (filter === 'Highest reward') tests = [...tests].sort((a, b) => b.credits - a.credits)
@@ -47,7 +48,7 @@ export function AvailableTestsPage() {
       <div className="filter-bar">
         <label className="search-box">
           <Search size={18} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search apps, categories, or tasks" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects, platforms, or tasks" />
         </label>
         <button className="button button-outline"><SlidersHorizontal size={17} /> Filters</button>
       </div>
@@ -57,7 +58,7 @@ export function AvailableTestsPage() {
         ))}
       </div>
 
-      <div className="results-heading"><span>{filteredTests.length} tests available</span><small>Matched to your Android profile</small></div>
+      <div className="results-heading"><span>{filteredTests.length} tests available</span><small>Matched to your testing profile</small></div>
       {filteredTests.length > 0 ? (
         <div className="tests-grid">
           {filteredTests.map((test) => <TestCard test={test} key={test.id} onStart={openTest} />)}
@@ -71,17 +72,17 @@ export function AvailableTestsPage() {
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="test-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="icon-button modal-close" onClick={() => setSelected(null)} aria-label="Close"><X size={20} /></button>
             <span className={`app-icon large ${selected.accent}`}>{selected.initials}</span>
-            <span className="section-kicker">{selected.category} · {selected.developer}</span>
+            <span className="section-kicker">{selected.platform} · {selected.category} · {selected.developer}</span>
             <h2 id="test-dialog-title">Test {selected.name}</h2>
             <p>{selected.description}</p>
             <div className="brief-box">
               <strong>What you’ll need to do</strong>
-              <ol><li>Join the app’s closed test from Google Play.</li><li>Complete the requested flow on your own device.</li><li>Submit useful notes and report any bugs you find.</li></ol>
+              <ol><li>Review the private access instructions and exact contract.</li><li>Complete the requested flow in the required environment.</li><li>Submit specific notes and relevant issue details.</li></ol>
             </div>
-            <label className="join-agreement"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box" /><span><strong>I can complete this contract on my own device.</strong><small>I agree to test the app and submit specific, truthful feedback.</small></span></label>
+            <label className="join-agreement"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box" /><span><strong>I can complete this contract in the required environment.</strong><small>I agree to test the software and submit specific, truthful feedback.</small></span></label>
             <div className="modal-actions">
               <button className="button button-outline" onClick={() => setSelected(null)}>Not now</button>
-              <button className="button button-dark" disabled={!agreement} onClick={acceptTest}>Join test · {selected.credits} credits held</button>
+              <button className="button button-dark" disabled={!agreement} onClick={acceptTest}>Join test · Earn {selected.credits} credits</button>
             </div>
           </section>
         </div>

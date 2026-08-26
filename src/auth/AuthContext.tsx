@@ -21,6 +21,7 @@ const demoUser: ConsoleUser = {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+const demoSessionKey = 'testexchange.demo-session.v1'
 
 /**
  * Single integration point for authentication. This demo session keeps the MVP
@@ -28,14 +29,24 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
  * and auth methods when the project is connected.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<ConsoleUser | null>(demoUser)
+  const [user, setUser] = useState<ConsoleUser | null>(() => window.localStorage.getItem(demoSessionKey) ? demoUser : null)
+
+  const signInDemo = () => {
+    window.localStorage.setItem(demoSessionKey, 'active')
+    setUser(demoUser)
+  }
+
+  const signOut = () => {
+    window.localStorage.removeItem(demoSessionKey)
+    setUser(null)
+  }
 
   const value = useMemo(
     () => ({
       user,
       isLoading: false,
-      signInDemo: () => setUser(demoUser),
-      signOut: () => setUser(null),
+      signInDemo,
+      signOut,
     }),
     [user],
   )
