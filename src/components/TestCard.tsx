@@ -1,36 +1,22 @@
-import { Clock3, MonitorCog, Users } from 'lucide-react'
-import type { AvailableTest } from '../data/mockData'
+import { MonitorCog, Users } from 'lucide-react'
+import type { Campaign } from '../api/types'
 
-export function TestCard({ test, onStart }: { test: AvailableTest; onStart?: (test: AvailableTest) => void }) {
-  const percentage = Math.round((test.testerCount / test.testerGoal) * 100)
-
+export function TestCard({ test, onStart }: { test: Campaign; onStart?: (test: Campaign) => void }) {
   return (
     <article className="test-card">
       <div className="test-card-top">
-        <span className={`app-icon ${test.accent}`}>{test.initials}</span>
+        <span className="app-icon mint">{test.name.slice(0, 2).toUpperCase()}</span>
         <div className="test-title">
-          <div className="title-with-badge">
-            <h3>{test.name}</h3>
-            {test.isNew && <span className="badge badge-new">New</span>}
-          </div>
-          <p>{test.developer} · {test.platform} · {test.category}</p>
+          <div className="title-with-badge"><h3>{test.name}</h3></div>
+          <p>{test.platform} · {test.category}</p>
         </div>
-        <span className="credit-reward">+{test.credits} cr</span>
+        <span className="credit-reward">+{test.reward_credits} cr</span>
       </div>
-      <p className="test-description">{test.description}</p>
-      <div className="tag-row">
-        {test.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
-      </div>
+      <p className="test-description">{test.public_summary}</p>
+      <div className="tag-row"><span className="tag">{test.category}</span><span className="tag">{test.platform}</span></div>
       <div className="test-meta">
-        <span><Clock3 size={15} />{test.duration}</span>
-        <span><MonitorCog size={15} />{test.device}</span>
-      </div>
-      <div className="tester-progress">
-        <div className="progress-label">
-          <span><Users size={15} /> {test.testerCount} of {test.testerGoal} testers</span>
-          <span>{test.testerGoal - test.testerCount} spots left</span>
-        </div>
-        <div className="progress-track"><span style={{ width: `${percentage}%` }} /></div>
+        <span><MonitorCog size={15} />{test.minimum_version || 'See requirements'}</span>
+        <span><Users size={15} />Goal: {test.target_testers} testers</span>
       </div>
       <button className="button button-dark button-full" onClick={() => onStart?.(test)}>View test details</button>
     </article>

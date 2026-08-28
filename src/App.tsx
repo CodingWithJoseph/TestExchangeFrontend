@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ConsoleLayout } from './components/ConsoleLayout'
 import { PublicLayout } from './components/PublicLayout'
+import { RequireAccount } from './account/RequireAccount'
 import { RequireAuth } from './auth/RequireAuth'
 import { AvailableTestsPage } from './pages/AvailableTestsPage'
 import { CampaignWorkspacePage } from './pages/CampaignWorkspacePage'
@@ -31,17 +32,19 @@ export function App() {
       </Route>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
-        <Route path="/console" element={<ConsoleLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="available-tests" element={<AvailableTestsPage />} />
-          <Route path="my-tests" element={<MyTestsPage />} />
-          <Route path="my-tests/:assignmentId" element={<TestWorkspacePage />} />
-          <Route path="my-campaigns" element={<MyCampaignsPage />} />
-          <Route path="my-campaigns/new" element={<NewCampaignPage />} />
-          <Route path="my-campaigns/:campaignId" element={<CampaignWorkspacePage />} />
-          <Route path="my-campaigns/:campaignId/submissions/:submissionId" element={<SubmissionReviewPage />} />
-          <Route path="credits" element={<CreditsPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+        <Route element={<RequireAccount />}>
+          <Route path="/console" element={<ConsoleLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="available-tests" element={<AvailableTestsPage />} />
+            <Route path="my-tests" element={<MyTestsPage />} />
+            <Route path="my-tests/:assignmentId" element={<TestWorkspacePage />} />
+            <Route path="my-campaigns" element={<MyCampaignsPage />} />
+            <Route path="my-campaigns/new" element={<NewCampaignPage />} />
+            <Route path="my-campaigns/:campaignId" element={<CampaignWorkspacePage />} />
+            <Route path="my-campaigns/:campaignId/submissions/:submissionId" element={<SubmissionReviewPage />} />
+            <Route path="credits" element={<CreditsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

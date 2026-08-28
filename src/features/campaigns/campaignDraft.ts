@@ -117,3 +117,8 @@ export function saveCampaignDraft(draft: CampaignDraft) {
   window.localStorage.setItem(storageKey, JSON.stringify(campaigns))
   return nextDraft
 }
+
+export function deleteCampaignDraft(id: string) {
+  const campaigns = loadCampaignDrafts().filter((campaign) => campaign.id !== id)
+  window.localStorage.setItem(storageKey, JSON.stringify(campaigns))
+}

@@ -18,8 +18,11 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAccount } from '../account/AccountContext'
+import { useApi } from '../api/ApiContext'
 import {
   createCampaignDraft,
+  deleteCampaignDraft,
   loadCampaignDraft,
   saveCampaignDraft,
   type CampaignDraft,
@@ -52,6 +55,8 @@ type ValidationErrors = Partial<Record<ValidationKey, string>>
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function NewCampaignPage() {
+  const api = useApi()
+  const { balance: availableCredits, refreshAccount } = useAccount()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const draftId = searchParams.get('draft')
@@ -62,10 +67,11 @@ export function NewCampaignPage() {
   const [saveState, setSaveState] = useState<SaveState>(draftId ? 'saved' : 'idle')
   const [validationAttemptedSteps, setValidationAttemptedSteps] = useState<number[]>([])
   const [agreement, setAgreement] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const isFirstAutosaveRender = useRef(true)
 
   const reservedCredits = draft.testerGoal * draft.creditsPerTester
-  const availableCredits = 24
   const platformField = platformFields[draft.platform]
   const minimumTesterGoal = draft.platform === 'Android' ? 12 : 1
 
@@ -77,15 +83,15 @@ export function NewCampaignPage() {
       else if (draft.platform === 'Android' && !packageNamePattern.test(draft.projectIdentifier.trim())) errors.projectIdentifier = 'Use a complete package name such as com.company.app.'
       if (!draft.accessUrl.trim()) errors.accessUrl = 'Enter the private test access link.'
       else if (!webUrlPattern.test(draft.accessUrl.trim())) errors.accessUrl = 'Enter a complete link beginning with https://.'
-      if (!draft.publicSummary.trim()) errors.publicSummary = 'Write a short recruitment brief for eligible testers.'
-      if (!draft.targetAudience.trim()) errors.targetAudience = 'Describe who should test this project.'
+      if (draft.publicSummary.trim().length < 20) errors.publicSummary = 'Write a recruitment brief of at least 20 characters.'
+      if (draft.targetAudience.trim().length < 10) errors.targetAudience = 'Describe who should test this project in at least 10 characters.'
       return errors
     }
 
     if (step === 2) {
-      return draft.tasks.length >= 2 && draft.tasks.every((task) => task.trim().length > 0)
+      return draft.tasks.length >= 2 && draft.tasks.every((task) => task.trim().length >= 10)
         ? {}
-        : { tasks: 'Keep at least two complete testing tasks.' }
+        : { tasks: 'Keep at least two testing tasks with 10 or more characters.' }
     }
 
     if (step === 3) {
@@ -163,17 +169,48 @@ export function NewCampaignPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const createCampaign = () => {
+  const createCampaign = async () => {
     if (!stepIsValid) {
       setValidationAttemptedSteps((current) => current.includes(step) ? current : [...current, step])
       return
     }
 
+    setPublishing(true)
+    setPublishError(null)
     try {
-      const savedDraft = saveCampaignDraft(draft)
-      navigate('/console/my-campaigns', { state: { createdCampaign: savedDraft.projectName || 'Untitled campaign' } })
-    } catch {
-      setSaveState('error')
+      const slugBase = draft.projectName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'test'
+      const campaign = await api.createCampaign({
+        name: draft.projectName.trim(),
+        slug: `${slugBase}-${Date.now().toString(36)}`,
+        platform: draft.platform.toLowerCase() as 'android' | 'ios' | 'web' | 'desktop' | 'api',
+        category: draft.category,
+        public_summary: draft.publicSummary.trim(),
+        public_tester_requirements: draft.targetAudience.trim(),
+        minimum_version: draft.minimumEnvironment || null,
+        target_testers: draft.testerGoal,
+        reward_credits: draft.creditsPerTester,
+      })
+      const evidenceRequirements = [
+        'Structured written feedback for every required task.',
+        draft.evidence.screenshots ? 'Include screenshots when they clarify an issue.' : '',
+        draft.evidence.crashDetails ? 'Include exact crash or error details when relevant.' : '',
+      ].filter(Boolean).join(' ')
+      await api.saveContract(campaign.id, {
+        tester_instructions: `Complete ${draft.sessionCount} testing ${draft.sessionCount === 1 ? 'session' : 'sessions'} across the agreed ${draft.retentionDays}-day testing period. ${draft.publicSummary.trim()}`,
+        access_instructions: draft.accessUrl.trim(),
+        device_requirements: [draft.minimumEnvironment, draft.environmentNotes.trim()].filter(Boolean).join('. '),
+        evidence_requirements: evidenceRequirements,
+        review_window_hours: draft.reviewWindowHours,
+        tasks: draft.tasks.map((task) => ({ title: task.trim().slice(0, 160), instructions: task.trim(), evidence_required: true })),
+      })
+      await api.publishCampaign(campaign.id)
+      deleteCampaignDraft(draft.id)
+      await refreshAccount()
+      navigate(`/console/my-campaigns/${campaign.id}`, { state: { createdCampaign: campaign.name } })
+    } catch (requestError) {
+      setPublishError(requestError instanceof Error ? requestError.message : 'Unable to publish this campaign.')
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -350,7 +387,7 @@ export function NewCampaignPage() {
             {step < 4 ? (
               <button className="button button-dark" type="button" onClick={goNext}>Continue <ArrowRight size={16} /></button>
             ) : (
-              <button className="button button-dark" type="button" onClick={createCampaign}><ShieldCheck size={16} /> Create campaign</button>
+              <button className="button button-dark" type="button" disabled={publishing} onClick={() => void createCampaign()}><ShieldCheck size={16} /> {publishing ? 'Publishing…' : 'Create and publish campaign'}</button>
             )}
           </footer>
         </section>
@@ -375,6 +412,7 @@ export function NewCampaignPage() {
           )}
         </aside>
       </div>
+      {publishError && <div className="form-error">{publishError}</div>}
     </div>
   )
 }

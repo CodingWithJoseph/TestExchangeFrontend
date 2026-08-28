@@ -1,36 +1,35 @@
 import { ArrowUpRight, Clock3, MonitorCog, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import type { CommunityTest } from '../features/community/communityData'
+import type { Campaign } from '../api/types'
+import { campaignTags, platformLabel, publishedLabel } from '../features/community/campaignPresentation'
 
-export function CommunityTestRow({ test }: { test: CommunityTest }) {
-  const spotsLeft = Math.max(test.testerGoal - test.testerCount, 0)
-
+export function CommunityTestRow({ test }: { test: Campaign }) {
   return (
     <article className="community-test-row">
-      <div className="community-vitals" aria-label={`${test.reward} credit reward, ${spotsLeft} spots remaining`}>
-        <strong>{test.reward}</strong>
+      <div className="community-vitals" aria-label={`${test.reward_credits} credit reward, ${test.target_testers} tester goal`}>
+        <strong>{test.reward_credits}</strong>
         <span>credits</span>
-        <small>{spotsLeft} spots</small>
+        <small>{test.target_testers} needed</small>
       </div>
       <div className="community-test-copy">
         <div className="community-test-heading">
-          <span className={`app-icon ${test.accent}`}>{test.initials}</span>
+          <span className="app-icon mint">{test.name.slice(0, 2).toUpperCase()}</span>
           <div>
-            <Link to={`/tests/${test.slug}`}><h2>{test.title}</h2></Link>
-            <p>{test.projectName} by {test.developer}</p>
+            <Link to={`/tests/${test.slug}`}><h2>{test.name}</h2></Link>
+            <p>{test.name} · {test.category}</p>
           </div>
-          <span className={`community-status ${test.status.toLowerCase().replaceAll(' ', '-')}`}>{test.status}</span>
+          <span className="community-status open">Open</span>
         </div>
-        <p className="community-summary">{test.summary}</p>
-        <div className="community-tags">{test.tags.map((tag) => <Link key={tag} to={`/tests?tag=${tag}`}>{tag}</Link>)}</div>
+        <p className="community-summary">{test.public_summary}</p>
+        <div className="community-tags">{campaignTags(test).map((tag) => <Link key={tag} to={`/tests?tag=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>
         <div className="community-meta">
-          <span><MonitorCog size={14} /> {test.platform} · {test.environment}</span>
-          <span><Clock3 size={14} /> {test.duration}</span>
-          <span><Users size={14} /> {test.testerCount}/{test.testerGoal} joined</span>
-          <span className="community-posted">posted {test.posted}</span>
+          <span><MonitorCog size={14} /> {platformLabel(test.platform)} · {test.minimum_version || 'See public requirements'}</span>
+          <span><Clock3 size={14} /> Contract shown after acceptance</span>
+          <span><Users size={14} /> Goal: {test.target_testers} testers</span>
+          <span className="community-posted">posted {publishedLabel(test)}</span>
         </div>
       </div>
-      <Link className="community-row-arrow" to={`/tests/${test.slug}`} aria-label={`View ${test.projectName}`}><ArrowUpRight size={18} /></Link>
+      <Link className="community-row-arrow" to={`/tests/${test.slug}`} aria-label={`View ${test.name}`}><ArrowUpRight size={18} /></Link>
     </article>
   )
 }

@@ -1,45 +1,49 @@
 import { Send, ShieldCheck } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
-import type { WorkflowMessage } from '../features/testing/testingWorkflow'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useApi } from '../api/ApiContext'
+import type { PrivateMessage } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
 
 type ConversationPanelProps = {
-  threadId: string
-  initialMessages: WorkflowMessage[]
-  currentRole: 'tester' | 'developer'
+  assignmentId: string
   title?: string
 }
 
-function loadMessages(threadId: string, initialMessages: WorkflowMessage[]) {
-  if (typeof window === 'undefined') return initialMessages
-
-  try {
-    const saved = window.localStorage.getItem(`testexchange.messages.${threadId}`)
-    return saved ? (JSON.parse(saved) as WorkflowMessage[]) : initialMessages
-  } catch {
-    return initialMessages
-  }
+function messageTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
-export function ConversationPanel({ threadId, initialMessages, currentRole, title = 'Private conversation' }: ConversationPanelProps) {
-  const [messages, setMessages] = useState(() => loadMessages(threadId, initialMessages))
+export function ConversationPanel({ assignmentId, title = 'Private conversation' }: ConversationPanelProps) {
+  const api = useApi()
+  const { user } = useAuth()
+  const [messages, setMessages] = useState<PrivateMessage[]>([])
   const [message, setMessage] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
 
-  const sendMessage = (event: FormEvent) => {
+  useEffect(() => {
+    let active = true
+    void api.listMessages(assignmentId)
+      .then((items) => { if (active) setMessages(items) })
+      .catch((requestError) => { if (active) setError(requestError instanceof Error ? requestError.message : 'Unable to load messages.') })
+    return () => { active = false }
+  }, [api, assignmentId])
+
+  const sendMessage = async (event: FormEvent) => {
     event.preventDefault()
     const body = message.trim()
-    if (!body) return
-
-    const nextMessage: WorkflowMessage = {
-      id: `${threadId}-${Date.now()}`,
-      author: currentRole === 'tester' ? 'You' : 'Joseph · Calm Cards',
-      role: currentRole,
-      body,
-      time: 'Just now',
+    if (!body || sending) return
+    setSending(true)
+    setError(null)
+    try {
+      const nextMessage = await api.sendMessage(assignmentId, body)
+      setMessages((current) => [...current, nextMessage])
+      setMessage('')
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to send this message.')
+    } finally {
+      setSending(false)
     }
-    const nextMessages = [...messages, nextMessage]
-    setMessages(nextMessages)
-    window.localStorage.setItem(`testexchange.messages.${threadId}`, JSON.stringify(nextMessages))
-    setMessage('')
   }
 
   return (
@@ -49,18 +53,18 @@ export function ConversationPanel({ threadId, initialMessages, currentRole, titl
         <span className="privacy-label">Private</span>
       </header>
       <div className="message-thread" aria-live="polite">
-        {messages.map((item) => item.role === 'system' ? (
-          <div className="system-message" key={item.id}><ShieldCheck size={13} /><span>{item.body}</span><small>{item.time}</small></div>
-        ) : (
-          <article className={`thread-message ${item.role === currentRole ? 'mine' : ''}`} key={item.id}>
-            <div><strong>{item.author}</strong><small>{item.time}</small></div>
+        {messages.length === 0 && <div className="system-message"><ShieldCheck size={13} /><span>No private messages yet.</span></div>}
+        {messages.map((item) => (
+          <article className={`thread-message ${item.sender_id === user?.id ? 'mine' : ''}`} key={item.id}>
+            <div><strong>{item.sender_id === user?.id ? 'You' : 'Campaign participant'}</strong><small>{messageTime(item.created_at)}</small></div>
             <p>{item.body}</p>
           </article>
         ))}
       </div>
       <form className="message-composer" onSubmit={sendMessage}>
-        <label htmlFor={`message-${threadId}`}>Message about this test</label>
-        <div><textarea id={`message-${threadId}`} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ask a question or clarify the existing contract…" rows={2} /><button className="button button-dark" type="submit" disabled={!message.trim()}><Send size={15} /> Send</button></div>
+        <label htmlFor={`message-${assignmentId}`}>Message about this test</label>
+        <div><textarea id={`message-${assignmentId}`} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ask a question or clarify the existing contract…" rows={2} /><button className="button button-dark" type="submit" disabled={!message.trim() || sending}><Send size={15} /> {sending ? 'Sending…' : 'Send'}</button></div>
+        {error && <small className="field-error">{error}</small>}
         <small>Messages cannot add new testing requirements after the tester joins.</small>
       </form>
     </section>

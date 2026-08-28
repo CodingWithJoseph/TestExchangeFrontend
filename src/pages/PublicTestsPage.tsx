@@ -1,20 +1,35 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useApi } from '../api/ApiContext'
+import type { Campaign, Platform } from '../api/types'
 import { CommunityTestRow } from '../components/CommunityTestRow'
-import { communityTests, type CommunityPlatform } from '../features/community/communityData'
+import { campaignTags, platformLabel } from '../features/community/campaignPresentation'
 import { usePageMetadata } from '../features/community/usePageMetadata'
 
-const platforms: Array<'All' | CommunityPlatform> = ['All', 'Android', 'iOS', 'Web', 'Desktop', 'API']
+const platforms: Array<'All' | Platform> = ['All', 'android', 'ios', 'web', 'desktop', 'api']
 const sortOptions = ['Newest', 'Highest reward', 'Fewest spots'] as const
 
 export function PublicTestsPage() {
+  const api = useApi()
   usePageMetadata('Browse software tests', 'Find public software testing requests across mobile, web, desktop, and API projects.')
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
   const platform = searchParams.get('platform') ?? 'All'
   const tag = searchParams.get('tag') ?? ''
   const sort = searchParams.get('sort') ?? 'Newest'
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void api.listPublicCampaigns()
+      .then((items) => { if (active) setCampaigns(items) })
+      .catch((requestError) => { if (active) setError(requestError instanceof Error ? requestError.message : 'Unable to load tests.') })
+      .finally(() => { if (active) setIsLoading(false) })
+    return () => { active = false }
+  }, [api])
 
   const updateParam = (key: string, value: string, defaultValue = '') => {
     const next = new URLSearchParams(searchParams)
@@ -25,18 +40,17 @@ export function PublicTestsPage() {
 
   const tests = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    const filtered = communityTests.filter((test) => {
-      const searchable = `${test.title} ${test.projectName} ${test.developer} ${test.platform} ${test.category} ${test.tags.join(' ')}`.toLowerCase()
+    const filtered = campaigns.filter((test) => {
+      const searchable = `${test.name} ${test.platform} ${test.category} ${test.public_summary} ${test.public_tester_requirements}`.toLowerCase()
       return (!normalizedQuery || searchable.includes(normalizedQuery))
         && (platform === 'All' || test.platform === platform)
-        && (!tag || test.tags.includes(tag))
-        && test.status !== 'Completed'
+        && (!tag || campaignTags(test).some((item) => item.toLowerCase() === tag.toLowerCase()))
     })
 
-    if (sort === 'Highest reward') return [...filtered].sort((a, b) => b.reward - a.reward)
-    if (sort === 'Fewest spots') return [...filtered].sort((a, b) => (a.testerGoal - a.testerCount) - (b.testerGoal - b.testerCount))
-    return filtered
-  }, [platform, query, sort, tag])
+    if (sort === 'Highest reward') return [...filtered].sort((a, b) => b.reward_credits - a.reward_credits)
+    if (sort === 'Fewest spots') return [...filtered].sort((a, b) => a.target_testers - b.target_testers)
+    return [...filtered].sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
+  }, [campaigns, platform, query, sort, tag])
 
   const clearFilters = () => setSearchParams({})
 
@@ -60,7 +74,7 @@ export function PublicTestsPage() {
           <div className="directory-filter-title"><SlidersHorizontal size={16} /><strong>Filter tests</strong></div>
           <fieldset>
             <legend>Platform</legend>
-            {platforms.map((item) => <label key={item}><input type="radio" name="platform" checked={platform === item} onChange={() => updateParam('platform', item, 'All')} /><span>{item}</span></label>)}
+            {platforms.map((item) => <label key={item}><input type="radio" name="platform" checked={platform === item} onChange={() => updateParam('platform', item, 'All')} /><span>{item === 'All' ? item : platformLabel(item)}</span></label>)}
           </fieldset>
           <fieldset>
             <legend>Sort by</legend>
@@ -74,7 +88,11 @@ export function PublicTestsPage() {
             <div><strong>{tests.length} open {tests.length === 1 ? 'test' : 'tests'}</strong>{tag && <span className="active-filter-tag">#{tag} <button onClick={() => updateParam('tag', '')} aria-label={`Remove ${tag} filter`}><X size={12} /></button></span>}</div>
             <small>Rewards are released after approved work</small>
           </div>
-          {tests.length ? (
+          {isLoading ? (
+            <div className="community-empty-state"><p>Loading open tests…</p></div>
+          ) : error ? (
+            <div className="community-empty-state"><Search size={26} /><h2>Couldn’t load tests</h2><p>{error}</p></div>
+          ) : tests.length ? (
             <div className="community-feed-list">{tests.map((test) => <CommunityTestRow key={test.slug} test={test} />)}</div>
           ) : (
             <div className="community-empty-state"><Search size={26} /><h2>No matching tests</h2><p>Try another phrase or clear your current filters.</p><button className="button button-outline" onClick={clearFilters}>Clear filters</button></div>

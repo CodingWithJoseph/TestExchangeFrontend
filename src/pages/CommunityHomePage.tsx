@@ -1,10 +1,26 @@
 import { ArrowRight, BadgeCheck, CircleDollarSign, LockKeyhole, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useApi } from '../api/ApiContext'
+import type { Campaign } from '../api/types'
 import { CommunityTestRow } from '../components/CommunityTestRow'
-import { communityTests, popularCommunityTags } from '../features/community/communityData'
+import { campaignTags } from '../features/community/campaignPresentation'
 
 export function CommunityHomePage() {
-  const openTests = communityTests.filter((test) => test.status !== 'Completed')
+  const api = useApi()
+  const [openTests, setOpenTests] = useState<Campaign[]>([])
+
+  useEffect(() => {
+    let active = true
+    void api.listPublicCampaigns().then((items) => { if (active) setOpenTests(items) }).catch(() => undefined)
+    return () => { active = false }
+  }, [api])
+
+  const popularTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    openTests.flatMap(campaignTags).forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1))
+    return [...counts].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 6)
+  }, [openTests])
 
   return (
     <div className="community-home">
@@ -34,10 +50,10 @@ export function CommunityHomePage() {
 
       <section className="community-stats" aria-label="Community statistics">
         <div className="public-container">
-          <div><strong>28</strong><span>open tests</span></div>
-          <div><strong>146</strong><span>tests completed this month</span></div>
-          <div><strong>92%</strong><span>approved without dispute</span></div>
-          <div><strong>5</strong><span>software platforms</span></div>
+          <div><strong>{openTests.length}</strong><span>open tests</span></div>
+          <div><strong>{openTests.reduce((sum, test) => sum + test.target_testers, 0)}</strong><span>tester spots requested</span></div>
+          <div><strong>{new Set(openTests.map((test) => test.platform)).size}</strong><span>active platforms</span></div>
+          <div><strong>100%</strong><span>private test workspaces</span></div>
         </div>
       </section>
 
@@ -60,7 +76,7 @@ export function CommunityHomePage() {
           <section className="community-side-card">
             <div className="side-card-heading"><h3>Popular tags</h3><Link to="/tags">See all</Link></div>
             <div className="popular-tags">
-              {popularCommunityTags.map((tag) => <Link key={tag.label} to={`/tests?tag=${tag.label}`}><span>{tag.label}</span><small>{tag.count}</small></Link>)}
+              {popularTags.length ? popularTags.map((tag) => <Link key={tag.label} to={`/tests?tag=${encodeURIComponent(tag.label)}`}><span>{tag.label}</span><small>{tag.count}</small></Link>) : <p>Tags appear as campaigns are published.</p>}
             </div>
           </section>
           <section className="community-side-card community-cta-card">
