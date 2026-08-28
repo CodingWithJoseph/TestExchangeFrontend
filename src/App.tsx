@@ -27,7 +27,8 @@ export function App() {
         <Route index element={<CommunityHomePage />} />
         <Route path="tests" element={<PublicTestsPage />} />
         <Route path="tests/:testSlug" element={<PublicTestDetailPage />} />
-        <Route path="tags" element={<CommunityTagsPage />} />
+        <Route path="categories" element={<CommunityTagsPage />} />
+        <Route path="tags" element={<Navigate to="/categories" replace />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
       </Route>
       <Route path="/login" element={<LoginPage />} />
