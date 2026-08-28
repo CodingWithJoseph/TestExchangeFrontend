@@ -1,114 +1,133 @@
-import {
-  ArrowLeft,
-  CalendarDays,
-  Check,
-  CheckCircle2,
-  CircleDashed,
-  Clock3,
-  FileCheck2,
-  LockKeyhole,
-  RotateCcw,
-  ShieldCheck,
-  Smartphone,
-} from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Check, CheckCircle2, Clock3, ExternalLink, FileCheck2, LockKeyhole, RotateCcw, ShieldCheck } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { useAccount } from '../account/AccountContext'
+import { useApi } from '../api/ApiContext'
 import { ConversationPanel } from '../components/ConversationPanel'
-import { loadJoinedAssignments, testAssignments, workflowStatusClass } from '../features/testing/testingWorkflow'
+import { useAssignmentWorkspace } from '../features/testing/useAssignmentWorkspace'
+import { assignmentStatusClass, assignmentStatusLabel, formatDate } from '../features/testing/workflowFormat'
 
-function AssignmentNotice({ status, note }: { status: string; note?: string }) {
-  if (status === 'Access pending') return <div className="workspace-notice warning"><Clock3 size={18} /><div><strong>Waiting for developer access</strong><p>{note}</p></div></div>
-  if (status === 'In review') return <div className="workspace-notice review"><ShieldCheck size={18} /><div><strong>Your submission is protected during review</strong><p>The developer must review it against the original contract. Requirements cannot be added now.</p></div></div>
-  if (status === 'Changes requested') return <div className="workspace-notice attention"><RotateCcw size={18} /><div><strong>A focused correction was requested</strong><p>{note}</p></div></div>
-  if (status === 'Approved') return <div className="workspace-notice success"><CheckCircle2 size={18} /><div><strong>Test approved and credits released</strong><p>{note}</p></div></div>
-  return null
+function urlFrom(value: string | null | undefined) {
+  if (!value) return null
+  return value.match(/https?:\/\/\S+/)?.[0] || null
 }
 
 export function TestWorkspacePage() {
   const { assignmentId } = useParams()
-  const assignment = [...loadJoinedAssignments(), ...testAssignments].find((item) => item.id === assignmentId)
-  const [correction, setCorrection] = useState('')
-  const [resubmitted, setResubmitted] = useState(false)
+  const api = useApi()
+  const { refreshAccount } = useAccount()
+  const { workspace, isLoading, error: loadError, refresh } = useAssignmentWorkspace(assignmentId)
+  const [summary, setSummary] = useState('')
+  const [evidence, setEvidence] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  if (!assignment) return <Navigate to="/console/my-tests" replace />
+  const latestSubmission = workspace?.submissions[0]
+  const latestReview = workspace?.reviews.find((review) => review.submission_id === latestSubmission?.id)
 
-  const progress = assignment.status === 'Approved' ? 4 : assignment.status === 'In review' || resubmitted ? 3 : assignment.status === 'Changes requested' ? 3 : assignment.status === 'Access pending' ? 1 : 2
-  const canWork = assignment.status !== 'Access pending'
+  useEffect(() => {
+    if (!workspace?.contract) return
+    const notes = Object.fromEntries(workspace.contract.tasks.map((task) => {
+      const existing = latestSubmission?.items.find((item) => item.task_id === task.id)?.note || ''
+      return [task.id, existing]
+    }))
+    setEvidence(notes)
+    setSummary(latestSubmission?.summary || '')
+  }, [latestSubmission, workspace?.contract])
 
-  const resubmit = () => {
-    if (correction.trim().length < 10) return
-    setResubmitted(true)
+  const canSubmit = useMemo(() => {
+    if (!workspace?.contract || summary.trim().length < 20) return false
+    return workspace.contract.tasks.every((task) => !task.evidence_required || (evidence[task.id] || '').trim().length > 0)
+  }, [evidence, summary, workspace?.contract])
+
+  if (!assignmentId) return <Navigate to="/console/my-tests" replace />
+  if (isLoading) return <div className="empty-state"><p>Loading private workspace…</p></div>
+  if (loadError || !workspace) return <div className="empty-state"><h2>Couldn’t open this test</h2><p>{loadError || 'Assignment not found.'}</p><Link className="button button-outline" to="/console/my-tests">Back to my tests</Link></div>
+  if (workspace.isOwner) return <Navigate to={`/console/my-campaigns/${workspace.campaign.id}`} replace />
+
+  const { assignment, campaign, contract } = workspace
+  const accessUrl = urlFrom(contract?.access_instructions)
+
+  const startTesting = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      await api.startAssignment(assignment.id)
+      await refresh()
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to start this test.')
+    } finally {
+      setSaving(false)
+    }
   }
+
+  const submitEvidence = async () => {
+    if (!contract || !canSubmit || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      await api.createSubmission(assignment.id, summary.trim(), contract.tasks
+        .filter((task) => task.evidence_required || (evidence[task.id] || '').trim())
+        .map((task) => ({ task_id: task.id, kind: 'note' as const, note: evidence[task.id].trim() })))
+      await Promise.all([refresh(), refreshAccount()])
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to submit this evidence.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const statusNote = assignment.status === 'applied'
+    ? 'The developer must accept your request before the private contract unlocks.'
+    : assignment.status === 'submitted'
+      ? 'The developer must review this submission against the locked contract.'
+      : assignment.status === 'changes_requested'
+        ? latestReview?.notes || 'The developer requested a focused correction.'
+        : assignment.status === 'approved'
+          ? latestReview?.notes || `${campaign.reward_credits} credits were released to your account.`
+          : assignment.status === 'rejected'
+            ? latestReview?.notes || 'The developer rejected this submission.'
+            : null
 
   return (
     <div className="page-stack workspace-page">
-      <div className="workspace-breadcrumb"><Link to="/console/my-tests"><ArrowLeft size={15} /> My tests</Link><span>/</span><span>{assignment.appName}</span></div>
-
+      <div className="workspace-breadcrumb"><Link to="/console/my-tests"><ArrowLeft size={15} /> My tests</Link><span>/</span><span>{campaign.name}</span></div>
       <header className="workspace-hero">
-        <div className="workspace-app"><span className="app-icon large mint">{assignment.appInitials}</span><div><span className="page-eyebrow">TESTER WORKSPACE · {assignment.category.toUpperCase()}</span><h1>{assignment.appName}</h1><p>{assignment.developer} · {assignment.device}</p></div></div>
-        <div className="workspace-hero-status"><span className={`status-pill ${workflowStatusClass(resubmitted ? 'In review' : assignment.status)}`}>{resubmitted ? 'In review' : assignment.status}</span><strong>+{assignment.credits} credits</strong><small>{assignment.status === 'Approved' ? 'Released' : 'Protected until review'}</small></div>
+        <div className="workspace-app"><span className="app-icon large mint">{campaign.name.slice(0, 2).toUpperCase()}</span><div><span className="page-eyebrow">TESTER WORKSPACE · {campaign.category.toUpperCase()}</span><h1>{campaign.name}</h1><p>{campaign.platform} · {campaign.minimum_version || 'See contract requirements'}</p></div></div>
+        <div className="workspace-hero-status"><span className={`status-pill ${assignmentStatusClass(assignment.status)}`}>{assignmentStatusLabel(assignment.status)}</span><strong>+{campaign.reward_credits} credits</strong><small>{assignment.status === 'approved' ? 'Released' : 'Reserved until approval'}</small></div>
       </header>
 
-      <div className="workflow-steps" aria-label="Testing progress">
-        {[
-          ['1', 'Joined', assignment.joined],
-          ['2', 'Testing', `${assignment.sessionsCompleted}/${assignment.sessionsRequired} sessions`],
-          ['3', 'Review', assignment.submitted ?? 'Not submitted'],
-          ['4', 'Credits', assignment.status === 'Approved' ? 'Released' : 'Pending'],
-        ].map(([number, label, detail], index) => (
-          <div className={index < progress ? 'complete' : index === progress ? 'current' : ''} key={label}>
-            <span>{index < progress ? <Check size={14} /> : number}</span><div><strong>{label}</strong><small>{detail}</small></div>
-          </div>
-        ))}
-      </div>
-
-      <AssignmentNotice status={resubmitted ? 'In review' : assignment.status} note={assignment.reviewNote ?? assignment.accessNote} />
+      {statusNote && <div className={`workspace-notice ${assignment.status === 'approved' ? 'success' : assignment.status === 'changes_requested' || assignment.status === 'rejected' ? 'attention' : assignment.status === 'submitted' ? 'review' : 'warning'}`}>{assignment.status === 'approved' ? <CheckCircle2 size={18} /> : assignment.status === 'submitted' ? <ShieldCheck size={18} /> : assignment.status === 'changes_requested' ? <RotateCcw size={18} /> : <Clock3 size={18} />}<div><strong>{assignmentStatusLabel(assignment.status)}</strong><p>{statusNote}</p></div></div>}
+      {error && <div className="form-error">{error}</div>}
 
       <div className="workspace-layout">
         <div className="workspace-primary">
-          <section className="workspace-panel contract-panel">
-            <div className="workspace-panel-head"><div><span className="panel-icon"><FileCheck2 size={18} /></span><span><strong>Testing contract</strong><small>Accepted when you joined · requirements are locked</small></span></div><span className="locked-label"><LockKeyhole size={12} /> Locked</span></div>
-            <p className="contract-summary">{assignment.contractSummary}</p>
-            <div className="task-checklist">
-              {assignment.tasks.map((task, index) => <div key={task.title}><span className={task.complete ? 'done' : ''}>{task.complete ? <Check size={14} /> : index + 1}</span><strong>{task.title}</strong><small>{task.complete ? 'Complete' : canWork ? 'Not complete' : 'Available after access'}</small></div>)}
-            </div>
-            <div className="contract-facts">
-              <span><CalendarDays size={15} /><small>Retention</small><strong>{assignment.daysCompleted}/{assignment.retentionDays} days</strong></span>
-              <span><CircleDashed size={15} /><small>Sessions</small><strong>{assignment.sessionsCompleted}/{assignment.sessionsRequired}</strong></span>
-              <span><Smartphone size={15} /><small>Device</small><strong>{assignment.device}</strong></span>
-            </div>
-          </section>
+          {contract ? <section className="workspace-panel contract-panel">
+            <div className="workspace-panel-head"><div><span className="panel-icon"><FileCheck2 size={18} /></span><span><strong>Locked testing contract</strong><small>Version {contract.version} · requirements cannot change</small></span></div><span className="locked-label"><LockKeyhole size={12} /> Locked</span></div>
+            <p className="contract-summary">{contract.tester_instructions}</p>
+            {contract.access_instructions && <div className="brief-box"><strong>Private access instructions</strong><p>{contract.access_instructions}</p>{accessUrl && <a className="text-button" href={accessUrl} target="_blank" rel="noreferrer">Open test access <ExternalLink size={14} /></a>}</div>}
+            <div className="task-checklist">{contract.tasks.map((task, index) => <div key={task.id}><span>{index + 1}</span><strong>{task.title}</strong><small>{task.instructions}</small></div>)}</div>
+            <div className="brief-box"><strong>Evidence requirements</strong><p>{contract.evidence_requirements}</p>{contract.device_requirements && <small>{contract.device_requirements}</small>}</div>
+            {assignment.status === 'accepted' && <button className="button button-dark" disabled={saving} onClick={() => void startTesting()}>{saving ? 'Starting…' : 'I have access · Start testing'}</button>}
+          </section> : <section className="workspace-panel empty-work-panel"><LockKeyhole size={24} /><h2>Private contract locked</h2><p>Your request is waiting for developer acceptance. Only the public recruitment brief is visible right now.</p></section>}
 
-          {assignment.feedback ? (
-            <section className="workspace-panel submission-panel">
-              <div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>{assignment.status === 'Changes requested' && !resubmitted ? 'Your submission needs an update' : 'Submitted evidence'}</strong><small>{assignment.submitted ? `Submitted ${assignment.submitted}` : 'Not submitted'}</small></span></div><span className={`status-pill ${workflowStatusClass(resubmitted ? 'In review' : assignment.status)}`}>{resubmitted ? 'In review' : assignment.status}</span></div>
-              <div className="feedback-review-grid">
-                <div><span>OVERALL EXPERIENCE</span><p>{assignment.feedback.overall}</p></div>
-                <div><span>WHAT WAS CONFUSING</span><p>{assignment.feedback.confusing}</p></div>
-                <div><span>ISSUES FOUND</span><p>{assignment.feedback.issues}</p></div>
-                <div><span>DEVICE DETAILS</span><p>{assignment.feedback.device}</p></div>
-              </div>
-              {assignment.status === 'Changes requested' && !resubmitted && (
-                <div className="correction-box">
-                  <label htmlFor="correction-note">Correction evidence</label>
-                  <textarea id="correction-note" value={correction} onChange={(event) => setCorrection(event.target.value)} rows={4} placeholder="Describe what happened when you retried the requested step. Include the exact error or what the screenshot shows." />
-                  <div><small>{correction.trim().length < 10 ? 'Add enough detail for the developer to review.' : 'Ready to resubmit this correction.'}</small><button className="button button-dark" onClick={resubmit} disabled={correction.trim().length < 10}><RotateCcw size={15} /> Resubmit correction</button></div>
-                </div>
-              )}
-              {resubmitted && <div className="inline-success"><CheckCircle2 size={16} /><span><strong>Correction resubmitted</strong><small>The developer’s 48-hour review window restarted just now.</small></span></div>}
-            </section>
-          ) : (
-            <section className="workspace-panel empty-work-panel">
-              <LockKeyhole size={24} /><h2>{canWork ? 'Complete the contract before submitting' : 'Testing starts after access is granted'}</h2><p>{canWork ? 'Your progress and evidence form will appear here as contract tasks are completed.' : 'The private Play link will be revealed here only after the developer confirms your testing account.'}</p>
-            </section>
-          )}
+          {contract && ['in_progress', 'changes_requested'].includes(assignment.status) && <section className="workspace-panel submission-panel">
+            <div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>{assignment.status === 'changes_requested' ? 'Submit your correction' : 'Submit testing evidence'}</strong><small>Address every required task with specific, truthful observations</small></span></div></div>
+            <label className="builder-field"><span>Overall testing summary</span><textarea rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Describe what you tested, what happened, and the most useful result." /></label>
+            <div className="evidence-list">{contract.tasks.map((task, index) => <article key={task.id}><span>{index + 1}</span><div><small>TASK {index + 1}{task.evidence_required ? ' · REQUIRED' : ''}</small><strong>{task.title}</strong><p>{task.instructions}</p><textarea rows={3} value={evidence[task.id] || ''} onChange={(event) => setEvidence((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="What happened? Include exact behavior, errors, or observations." /></div></article>)}</div>
+            <div className="form-actions"><small>{canSubmit ? 'Ready to submit for developer review.' : 'Write a summary of at least 20 characters and address every required task.'}</small><button className="button button-dark" disabled={!canSubmit || saving} onClick={() => void submitEvidence()}>{saving ? 'Submitting…' : assignment.status === 'changes_requested' ? 'Resubmit correction' : 'Submit evidence'}</button></div>
+          </section>}
+
+          {latestSubmission && !['in_progress', 'changes_requested'].includes(assignment.status) && <section className="workspace-panel submission-panel">
+            <div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>Submission version {latestSubmission.version}</strong><small>Submitted {formatDate(latestSubmission.submitted_at)}</small></span></div><span className={`status-pill ${latestSubmission.status.replaceAll('_', '-')}`}>{latestSubmission.status.replaceAll('_', ' ')}</span></div>
+            <p>{latestSubmission.summary}</p>
+            <div className="evidence-list">{latestSubmission.items.map((item) => { const task = contract?.tasks.find((entry) => entry.id === item.task_id); return <article key={item.id}><span><Check size={14} /></span><div><strong>{task?.title || 'Additional evidence'}</strong><p>{item.note || item.external_url || item.storage_key}</p></div></article> })}</div>
+          </section>}
         </div>
 
         <aside className="workspace-side">
-          <section className="credit-hold-card">
-            <span className="panel-icon"><ShieldCheck size={18} /></span><div><span>CREDIT STATUS</span><strong>{assignment.credits} credits {assignment.status === 'Approved' ? 'released' : 'held'}</strong><p>{assignment.status === 'Approved' ? 'Added to your available balance.' : 'Reserved for you while the contract is active and during review.'}</p></div>
-          </section>
-          <ConversationPanel threadId={`assignment-${assignment.id}`} initialMessages={assignment.messages} currentRole="tester" />
+          <section className="credit-hold-card"><span className="panel-icon"><ShieldCheck size={18} /></span><div><span>CREDIT STATUS</span><strong>{campaign.reward_credits} credits {assignment.status === 'approved' ? 'released' : 'reserved'}</strong><p>{assignment.status === 'approved' ? 'Added to your available balance.' : 'Released only after the developer approves completed work.'}</p></div></section>
+          <ConversationPanel assignmentId={assignment.id} />
         </aside>
       </div>
     </div>

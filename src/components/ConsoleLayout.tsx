@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAccount } from '../account/AccountContext'
 import { useAuth } from '../auth/AuthContext'
 
 const navItems = [
@@ -25,12 +26,15 @@ const navItems = [
 export function ConsoleLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const { profile, balance } = useAccount()
   const navigate = useNavigate()
 
-  const handleSignOut = () => {
-    signOut()
+  const handleSignOut = async () => {
+    await signOut()
     navigate('/login')
   }
+
+  const initials = (profile?.display_name || user?.name || 'TE').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <div className="console-shell">
@@ -47,7 +51,7 @@ export function ConsoleLayout() {
 
         <div className="sidebar-balance">
           <span className="eyebrow">AVAILABLE BALANCE</span>
-          <strong>24 <small>credits</small></strong>
+          <strong>{balance} <small>credits</small></strong>
           <NavLink to="/console/credits" onClick={() => setMenuOpen(false)}>View activity <span>→</span></NavLink>
         </div>
 
@@ -63,20 +67,19 @@ export function ConsoleLayout() {
             >
               <Icon size={18} strokeWidth={1.9} />
               <span>{label}</span>
-              {label === 'My Tests' && <span className="nav-count">1</span>}
             </NavLink>
           ))}
         </nav>
 
         <div className="sidebar-footer">
           <NavLink to="/console/profile" className="user-card" onClick={() => setMenuOpen(false)}>
-            <span className="avatar">JD</span>
+            <span className="avatar">{initials}</span>
             <span className="user-copy">
-              <strong>{user?.name}</strong>
+              <strong>{profile?.display_name || user?.name}</strong>
               <small>{user?.email}</small>
             </span>
           </NavLink>
-          <button className="signout-button" onClick={handleSignOut} aria-label="Sign out">
+          <button className="signout-button" onClick={() => void handleSignOut()} aria-label="Sign out">
             <LogOut size={17} />
           </button>
         </div>
@@ -90,7 +93,7 @@ export function ConsoleLayout() {
             <Menu size={21} />
           </button>
           <span className="brand compact"><span className="brand-mark">T</span>TestExchange</span>
-          <span className="mobile-credit">24 cr</span>
+          <span className="mobile-credit">{balance} cr</span>
         </header>
         <main className="page-content">
           <Outlet />

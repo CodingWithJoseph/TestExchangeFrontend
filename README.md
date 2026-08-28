@@ -21,12 +21,13 @@ The MVP frontend for TestExchange: a community where software builders test real
 - Tester workspaces with locked contracts, evidence, correction requests, private messages, and protected credit status
 - Developer campaign management with access actions, tester progress, submission review, advisory quality checks, and approval or dispute decisions
 - Credits with an activity ledger and one-time pack placeholders
-- Profile with testing-environment details and notification preferences
+- Profile backed by the authenticated user’s API record
 
 ## Run locally
 
 ```bash
 npm install
+npm run check
 npm run dev
 ```
 
@@ -37,14 +38,31 @@ npm run check
 npm run build
 ```
 
-## Authentication
+Create `.env` from `.env.example` and add the frontend-safe Supabase values:
 
-The console is protected by `AuthProvider` and `RequireAuth`, while community pages are readable anonymously. A browser-local demo session keeps protected flows testable without a backend.
+```env
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+VITE_API_URL=http://127.0.0.1:8000
+```
 
-When Supabase is connected, replace the state and methods inside `src/auth/AuthContext.tsx` with the Supabase session, `onAuthStateChange`, sign-in, and sign-out calls. The routes and console layout should not need to change. Required environment variable names are listed in `.env.example`.
+Never put the Supabase database password or service-role key in this frontend file.
+
+## Authentication and API
+
+The console uses Supabase email/password Auth. Community campaign pages call the backend’s anonymous read endpoints, while protected requests attach the current Supabase access token. The backend creates the TestExchange profile and signup credit account when a signed-in user first enters the console.
+
+Run the backend on port `8000` and this Vite application on port `5173`. For local two-account testing, create one developer and one tester account (two browser profiles make switching easier), then follow this sequence:
+
+1. Developer creates and publishes a campaign.
+2. Tester opens the public request, signs in, and applies.
+3. Developer accepts the tester from the campaign workspace.
+4. Tester starts the assignment, completes contract tasks, and submits evidence.
+5. Developer approves, requests changes, or rejects the submission.
+6. An approval transfers the reserved reward and both credit ledgers reflect it.
 
 ## Current data boundary
 
-Console records are intentionally local mock data in `src/data/mockData.ts`, and public-safe community records live in `src/features/community/communityData.ts`. Campaign contracts are stored in browser storage through `src/features/campaigns/campaignDraft.ts` so the workflow can be tested before the backend contract is implemented. Credit purchases are shown as coming soon; there are no subscriptions.
+Campaigns, assignments, contracts, submissions, reviews, messages, profiles, and credit ledgers now come from the backend API. Unpublished campaign drafts remain in browser storage so the builder can autosave before anything is sent to the backend. Credit purchases are placeholders; there are no subscriptions.
 
-The automated quality pre-check shown in campaign setup and submission review is a product integration point only. It is described as an assistant for detecting incomplete or suspicious submissions, not as the final authority over credit transfers. Workspace actions and private conversations use local demo state until the backend workflow and audit ledger are connected.
+The automated quality pre-check shown in campaign setup and submission review is a future product integration point only. It is described as advisory and does not decide credit transfers.

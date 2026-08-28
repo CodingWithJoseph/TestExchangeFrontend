@@ -1,42 +1,71 @@
-import { CheckCircle2, MonitorCog } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { CheckCircle2, UserRound } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useAccount } from '../account/AccountContext'
+import { useApi } from '../api/ApiContext'
 import { useAuth } from '../auth/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 
 export function ProfilePage() {
+  const api = useApi()
   const { user } = useAuth()
+  const { profile, refreshAccount } = useAccount()
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [bio, setBio] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const saveProfile = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!profile) return
+    setUsername(profile.username)
+    setDisplayName(profile.display_name)
+    setBio(profile.bio || '')
+    setAvatarUrl(profile.avatar_url || '')
+  }, [profile])
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSaved(true)
-    window.setTimeout(() => setSaved(false), 2500)
+    setSaving(true)
+    setSaved(false)
+    setError(null)
+    try {
+      await api.saveProfile({
+        username: username.trim(),
+        display_name: displayName.trim(),
+        bio: bio.trim() || null,
+        avatar_url: avatarUrl.trim() || null,
+      })
+      await refreshAccount()
+      setSaved(true)
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save profile.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Keep your testing environments accurate so you receive relevant software testing tasks." />
-      <form className="profile-layout" onSubmit={saveProfile}>
+      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Choose how you appear inside the private testing community." />
+      <form className="profile-layout" onSubmit={(event) => void saveProfile(event)}>
         <section className="panel form-panel">
-          <div className="form-section-heading"><div><span className="avatar large-avatar">JD</span><div><h2>{user?.name}</h2><p>Member since August 2026</p></div></div><span className="verified-label"><CheckCircle2 size={15} /> Email verified</span></div>
+          <div className="form-section-heading"><div><span className="avatar large-avatar">{displayName.slice(0, 2).toUpperCase() || 'TE'}</span><div><h2>{displayName || 'TestExchange member'}</h2><p>Member since {profile ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '—'}</p></div></div><span className="verified-label"><CheckCircle2 size={15} /> Authenticated account</span></div>
           <div className="form-grid">
-            <label><span>Display name</span><input defaultValue={user?.name} /></label>
-            <label><span>Email address</span><input type="email" defaultValue={user?.email} /></label>
-            <label><span>Developer or studio name</span><input defaultValue="Independent developer" /></label>
-            <label><span>Country</span><select defaultValue="United States"><option>United States</option><option>Canada</option><option>United Kingdom</option><option>Australia</option></select></label>
+            <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} /></label>
+            <label><span>Username</span><input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={3} maxLength={40} pattern="[A-Za-z0-9_-]+" /></label>
+            <label className="field-full"><span>Email address</span><input type="email" value={user?.email || ''} readOnly /><small>Email is managed by Supabase Auth.</small></label>
+            <label className="field-full"><span>Bio</span><textarea rows={4} value={bio} onChange={(event) => setBio(event.target.value)} maxLength={500} placeholder="What kinds of software do you build or test?" /></label>
+            <label className="field-full"><span>Avatar URL <i>Optional</i></span><input type="url" value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://…" /></label>
           </div>
-          <div className="form-actions">{saved && <span className="save-confirmation"><CheckCircle2 size={16} /> Saved</span>}<button className="button button-dark" type="submit">Save changes</button></div>
+          {error && <div className="form-error">{error}</div>}
+          <div className="form-actions">{saved && <span className="save-confirmation"><CheckCircle2 size={16} /> Saved</span>}<button className="button button-dark" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></div>
         </section>
         <aside className="profile-side">
           <section className="panel device-panel">
-            <div className="form-section-heading"><div><span className="round-icon"><MonitorCog size={18} /></span><div><h2>Primary testing environment</h2><p>Used to match compatible tests</p></div></div></div>
-            <label><span>Platform</span><select defaultValue="Android"><option>Android</option><option>iOS</option><option>Web</option><option>Desktop</option><option>API</option></select></label>
-            <label><span>Environment details</span><input defaultValue="Google Pixel 8 · Android 16" /></label>
-          </section>
-          <section className="panel preference-panel">
-            <h2>Notifications</h2>
-            <label className="toggle-row"><span><strong>New test matches</strong><small>Projects that match your environments</small></span><input type="checkbox" defaultChecked /><i /></label>
-            <label className="toggle-row"><span><strong>Campaign updates</strong><small>Tester joins and new feedback</small></span><input type="checkbox" defaultChecked /><i /></label>
+            <div className="form-section-heading"><div><span className="round-icon"><UserRound size={18} /></span><div><h2>Private account details</h2><p>Only your public profile fields are editable here.</p></div></div></div>
+            <p className="muted">Device profiles and notification preferences will be added when matching and notifications are implemented. This page only saves fields supported by the current backend.</p>
           </section>
         </aside>
       </form>
