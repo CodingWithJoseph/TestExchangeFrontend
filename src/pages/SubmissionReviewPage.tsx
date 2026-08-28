@@ -3,11 +3,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useAccount } from '../account/AccountContext'
 import { useApi } from '../api/ApiContext'
-import type { Assignment, Campaign, Review, ReviewDecision, Submission, TestingContract } from '../api/types'
+import { ApiError } from '../api/client'
+import type { Assignment, Campaign, QualityCheck, Review, ReviewDecision, Submission, TestingContract } from '../api/types'
 import { ConversationPanel } from '../components/ConversationPanel'
+import { createEvidenceSignedUrl } from '../features/testing/evidenceStorage'
 import { formatDate } from '../features/testing/workflowFormat'
 
-type ReviewData = { campaign: Campaign; contract: TestingContract; assignment: Assignment; submission: Submission; review: Review | null }
+type ReviewData = { campaign: Campaign; contract: TestingContract; assignment: Assignment; submission: Submission; review: Review | null; qualityCheck: QualityCheck | null }
 
 export function SubmissionReviewPage() {
   const { campaignId, submissionId } = useParams()
@@ -19,6 +21,7 @@ export function SubmissionReviewPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [evidenceUrls, setEvidenceUrls] = useState<Record<string, string>>({})
 
   const loadReview = useCallback(async () => {
     if (!campaignId || !submissionId) return
@@ -34,7 +37,14 @@ export function SubmissionReviewPage() {
       const submission = group?.submissions.find((item) => item.id === submissionId)
       if (!group || !submission) throw new Error('Submission not found.')
       const reviews = await api.listReviews(submission.id)
-      setData({ campaign, contract, assignment: group.assignment, submission, review: reviews[0] || null })
+      let qualityCheck: QualityCheck | null = null
+      try {
+        qualityCheck = await api.getQualityCheck(submission.id)
+      } catch (requestError) {
+        // Keep the review workspace usable while an older backend is being rolled forward.
+        if (!(requestError instanceof ApiError) || requestError.status !== 404) throw requestError
+      }
+      setData({ campaign, contract, assignment: group.assignment, submission, review: reviews[0] || null, qualityCheck })
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load this submission.')
     } finally {
@@ -44,11 +54,25 @@ export function SubmissionReviewPage() {
 
   useEffect(() => { void loadReview() }, [loadReview])
 
+  useEffect(() => {
+    if (!data) return
+    let active = true
+    void Promise.all(data.submission.items.filter((item) => item.storage_key).map(async (item) => [item.id, await createEvidenceSignedUrl(item.storage_key!)] as const))
+      .then((entries) => {
+        if (!active) return
+        setEvidenceUrls(Object.fromEntries(entries.filter((entry): entry is [string, string] => Boolean(entry[1]))))
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError instanceof Error ? requestError.message : 'Unable to open evidence files.')
+      })
+    return () => { active = false }
+  }, [data])
+
   if (!campaignId || !submissionId) return <Navigate to="/console/my-campaigns" replace />
   if (isLoading) return <div className="empty-state"><p>Loading submission…</p></div>
   if (error || !data) return <div className="empty-state"><h2>Couldn’t open this submission</h2><p>{error || 'Submission not found.'}</p><Link className="button button-outline" to={`/console/my-campaigns/${campaignId}`}>Back to campaign</Link></div>
 
-  const { campaign, contract, assignment, submission, review } = data
+  const { campaign, contract, assignment, submission, review, qualityCheck } = data
   const decide = async () => {
     if (notes.trim().length < 5 || saving || review) return
     setSaving(true)
@@ -78,8 +102,8 @@ export function SubmissionReviewPage() {
       <div className="review-layout">
         <main className="review-evidence">
           <section className="workspace-panel review-summary-panel"><div className="workspace-panel-head"><div><span className="panel-icon"><ShieldCheck size={18} /></span><span><strong>Locked contract comparison</strong><small>Contract version {contract.version}</small></span></div><span className="completion-label"><Check size={13} /> {submission.items.length}/{contract.tasks.length} addressed</span></div><p>{submission.summary}</p></section>
-          <section className="workspace-panel"><div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>Task evidence</strong><small>Compare each response with the original requirement</small></span></div></div><div className="evidence-list">{submission.items.map((item, index) => { const task = contract.tasks.find((entry) => entry.id === item.task_id); return <article key={item.id}><span><Check size={14} /></span><div><small>TASK {index + 1}</small><strong>{task?.title || 'Additional evidence'}</strong>{task && <p>{task.instructions}</p>}<p><strong>Tester response:</strong> {item.note || item.external_url || item.storage_key}</p></div></article> })}</div></section>
-          <section className="workspace-panel quality-panel"><div className="workspace-panel-head"><div><span className="panel-icon orange"><Bot size={18} /></span><span><strong>Automated quality pre-check</strong><small>Not enabled in this release</small></span></div><span className="ai-label">ADVISORY ONLY</span></div><div className="quality-list"><div className="flagged"><CircleAlert size={17} /><span><strong>Manual contract review required</strong><small>The developer remains responsible for every approval, correction request, or rejection.</small></span></div></div></section>
+          <section className="workspace-panel"><div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>Task evidence</strong><small>Compare each response with the original requirement</small></span></div></div><div className="evidence-list">{submission.items.map((item, index) => { const task = contract.tasks.find((entry) => entry.id === item.task_id); const signedUrl = item.storage_key ? evidenceUrls[item.id] : null; return <article key={item.id}><span><Check size={14} /></span><div><small>TASK {index + 1}{item.kind === 'screenshot' ? ' · PHOTO' : ''}</small><strong>{task?.title || 'Additional evidence'}</strong>{task && <p>{task.instructions}</p>}{item.note && <p><strong>Tester response:</strong> {item.note}</p>}{item.external_url && <p><a className="text-button" href={item.external_url} target="_blank" rel="noreferrer">Open external evidence</a></p>}{signedUrl && (item.kind === 'screenshot' ? <a className="evidence-photo-link" href={signedUrl} target="_blank" rel="noreferrer"><img className="evidence-photo" src={signedUrl} alt="Tester-provided screenshot" /><span>Open full-size photo</span></a> : <p><a className="text-button" href={signedUrl} target="_blank" rel="noreferrer">Open private attachment</a></p>)}</div></article> })}</div></section>
+          <section className="workspace-panel quality-panel"><div className="workspace-panel-head"><div><span className="panel-icon orange"><Bot size={18} /></span><span><strong>Automated quality pre-check</strong><small>{qualityCheck ? `${qualityCheck.score}% · ${qualityCheck.status.replaceAll('_', ' ')}` : 'Waiting for backend quality check'}</small></span></div><span className="ai-label">ADVISORY ONLY</span></div>{qualityCheck ? <div className="quality-list">{qualityCheck.checks.map((item) => <div className={item.status} key={item.code}>{item.status === 'passed' ? <CheckCircle2 size={17} /> : <CircleAlert size={17} />}<span><strong>{item.label}</strong><small>{item.detail}</small></span></div>)}<p className="quality-disclaimer">{qualityCheck.disclaimer}</p></div> : <div className="quality-list"><div className="flagged"><CircleAlert size={17} /><span><strong>Manual contract review required</strong><small>The developer remains responsible for every approval, correction request, or rejection.</small></span></div></div>}</section>
         </main>
 
         <aside className="review-sidebar">

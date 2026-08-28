@@ -4,6 +4,12 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { useAccount } from '../account/AccountContext'
 import { useApi } from '../api/ApiContext'
 import { ConversationPanel } from '../components/ConversationPanel'
+import {
+  evidenceAcceptAttribute,
+  evidenceKindForFile,
+  uploadEvidenceFile,
+  validateEvidenceFile,
+} from '../features/testing/evidenceStorage'
 import { useAssignmentWorkspace } from '../features/testing/useAssignmentWorkspace'
 import { assignmentStatusClass, assignmentStatusLabel, formatDate } from '../features/testing/workflowFormat'
 
@@ -19,8 +25,10 @@ export function TestWorkspacePage() {
   const { workspace, isLoading, error: loadError, refresh } = useAssignmentWorkspace(assignmentId)
   const [summary, setSummary] = useState('')
   const [evidence, setEvidence] = useState<Record<string, string>>({})
+  const [attachments, setAttachments] = useState<Record<string, File[]>>({})
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const latestSubmission = workspace?.submissions[0]
   const latestReview = workspace?.reviews.find((review) => review.submission_id === latestSubmission?.id)
@@ -37,7 +45,10 @@ export function TestWorkspacePage() {
 
   const canSubmit = useMemo(() => {
     if (!workspace?.contract || summary.trim().length < 20) return false
-    return workspace.contract.tasks.every((task) => !task.evidence_required || (evidence[task.id] || '').trim().length > 0)
+    return workspace.contract.tasks.every((task) => {
+      const note = (evidence[task.id] || '').trim()
+      return !task.evidence_required || note.length > 0
+    })
   }, [evidence, summary, workspace?.contract])
 
   if (!assignmentId) return <Navigate to="/console/my-tests" replace />
@@ -64,17 +75,40 @@ export function TestWorkspacePage() {
   const submitEvidence = async () => {
     if (!contract || !canSubmit || saving) return
     setSaving(true)
+    setUploading(false)
     setError(null)
     try {
-      await api.createSubmission(assignment.id, summary.trim(), contract.tasks
-        .filter((task) => task.evidence_required || (evidence[task.id] || '').trim())
-        .map((task) => ({ task_id: task.id, kind: 'note' as const, note: evidence[task.id].trim() })))
+      const items = []
+      for (const task of contract.tasks) {
+        const note = (evidence[task.id] || '').trim()
+        if (task.evidence_required || note) {
+          items.push({ task_id: task.id, kind: 'note' as const, note })
+        }
+        for (const file of attachments[task.id] || []) {
+          setUploading(true)
+          const storageKey = await uploadEvidenceFile(assignment.id, file)
+          items.push({ task_id: task.id, kind: evidenceKindForFile(file), storage_key: storageKey })
+        }
+      }
+      await api.createSubmission(assignment.id, summary.trim(), items)
       await Promise.all([refresh(), refreshAccount()])
+      setAttachments({})
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to submit this evidence.')
     } finally {
       setSaving(false)
+      setUploading(false)
     }
+  }
+
+  const attachFiles = (taskId: string, files: File[]) => {
+    const validationError = files.map(validateEvidenceFile).find(Boolean)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError(null)
+    setAttachments((current) => ({ ...current, [taskId]: files }))
   }
 
   const statusNote = assignment.status === 'applied'
@@ -114,8 +148,8 @@ export function TestWorkspacePage() {
           {contract && ['in_progress', 'changes_requested'].includes(assignment.status) && <section className="workspace-panel submission-panel">
             <div className="workspace-panel-head"><div><span className="panel-icon purple"><FileCheck2 size={18} /></span><span><strong>{assignment.status === 'changes_requested' ? 'Submit your correction' : 'Submit testing evidence'}</strong><small>Address every required task with specific, truthful observations</small></span></div></div>
             <label className="builder-field"><span>Overall testing summary</span><textarea rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Describe what you tested, what happened, and the most useful result." /></label>
-            <div className="evidence-list">{contract.tasks.map((task, index) => <article key={task.id}><span>{index + 1}</span><div><small>TASK {index + 1}{task.evidence_required ? ' · REQUIRED' : ''}</small><strong>{task.title}</strong><p>{task.instructions}</p><textarea rows={3} value={evidence[task.id] || ''} onChange={(event) => setEvidence((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="What happened? Include exact behavior, errors, or observations." /></div></article>)}</div>
-            <div className="form-actions"><small>{canSubmit ? 'Ready to submit for developer review.' : 'Write a summary of at least 20 characters and address every required task.'}</small><button className="button button-dark" disabled={!canSubmit || saving} onClick={() => void submitEvidence()}>{saving ? 'Submitting…' : assignment.status === 'changes_requested' ? 'Resubmit correction' : 'Submit evidence'}</button></div>
+            <div className="evidence-list">{contract.tasks.map((task, index) => <article key={task.id}><span>{index + 1}</span><div><small>TASK {index + 1}{task.evidence_required ? ' · REQUIRED' : ''}</small><strong>{task.title}</strong><p>{task.instructions}</p><textarea rows={3} value={evidence[task.id] || ''} onChange={(event) => setEvidence((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="What happened? Include exact behavior, errors, or observations." /><label className="evidence-attachment"><span>Attach screenshots or files <em>optional</em></span><input type="file" multiple accept={evidenceAcceptAttribute()} onChange={(event) => attachFiles(task.id, Array.from(event.target.files || []))} /><small>PNG, JPEG, WebP, MP4, TXT, PDF, or ZIP · 50 MB maximum per file</small></label>{(attachments[task.id] || []).length > 0 && <div className="evidence-file-list">{attachments[task.id].map((file) => <span key={`${file.name}-${file.lastModified}`}>{file.name}</span>)}</div>}</div></article>)}</div>
+            <div className="form-actions"><small>{uploading ? 'Uploading private evidence…' : canSubmit ? 'Ready to submit for developer review.' : 'Write a summary of at least 20 characters and address every required task.'}</small><button className="button button-dark" disabled={!canSubmit || saving} onClick={() => void submitEvidence()}>{uploading ? 'Uploading…' : saving ? 'Submitting…' : assignment.status === 'changes_requested' ? 'Resubmit correction' : 'Submit evidence'}</button></div>
           </section>}
 
           {latestSubmission && !['in_progress', 'changes_requested'].includes(assignment.status) && <section className="workspace-panel submission-panel">

@@ -3506,6 +3506,15 @@ h3,
 .evidence-list small { color: var(--soft-muted); font-size: 7.5px; font-weight: 700; }
 .evidence-list strong { font-size: 10.5px; }
 .evidence-list p { color: #666e65; font-size: 9.5px; line-height: 1.5; }
+.evidence-attachment { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; background: #fafcf9; }
+.evidence-attachment > span { font-size: 9.5px; font-weight: 700; color: #4e5a51; }
+.evidence-attachment em { color: var(--soft-muted); font-style: normal; font-weight: 600; }
+.evidence-attachment input { max-width: 100%; font-size: 9px; }
+.evidence-attachment small { color: var(--soft-muted); font-size: 8px; }
+.evidence-file-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+.evidence-file-list span { padding: 4px 7px; border-radius: 5px; color: var(--green); background: #edf7ef; font-size: 8px; }
+.evidence-photo-link { display: inline-flex; align-items: flex-start; flex-direction: column; gap: 4px; margin-top: 4px; color: var(--green); font-size: 8.5px; font-weight: 700; }
+.evidence-photo { display: block; max-width: 260px; max-height: 220px; border: 1px solid var(--line); border-radius: 7px; object-fit: cover; }
 
 .feedback-review-grid.full > div { min-height: 125px; }
 .quality-panel .ai-label { color: var(--purple); background: var(--purple-soft); }
@@ -3517,6 +3526,7 @@ h3,
 .quality-list > div > span { display: flex; flex-direction: column; gap: 2px; }
 .quality-list strong { font-size: 9.5px; }
 .quality-list small { color: var(--soft-muted); font-size: 8.5px; line-height: 1.4; }
+.quality-disclaimer { margin: 8px 2px 0; color: var(--soft-muted); font-size: 8px; line-height: 1.4; }
 
 .decision-card { padding: 17px; }
 .decision-card h2 { margin-top: 6px; font-size: 16px; }

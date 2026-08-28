@@ -42,4 +42,23 @@ describe('API client', () => {
 
     await expect(request).rejects.toEqual(new ApiError('That username is already taken', 409))
   })
+
+  it('loads advisory quality checks for a protected submission', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      submission_id: 'submission-1',
+      assignment_id: 'assignment-1',
+      submission_version: 1,
+      submission_status: 'submitted',
+      status: 'ready_for_review',
+      score: 100,
+      checks: [{ code: 'summary_present', label: 'Summary provided', status: 'passed', detail: 'The tester included a summary.' }],
+      disclaimer: 'Advisory only.',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+    const result = await createApiClient('access-token', 'https://api.example.test').getQualityCheck('submission-1')
+
+    expect(result.status).toBe('ready_for_review')
+    expect(result.checks[0].code).toBe('summary_present')
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.test/api/v1/submissions/submission-1/quality-check')
+  })
 })

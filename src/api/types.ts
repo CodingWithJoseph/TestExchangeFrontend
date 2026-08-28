@@ -116,6 +116,24 @@ export type Submission = {
   items: EvidenceItem[]
 }
 
+export type QualityCheckItem = {
+  code: string
+  label: string
+  status: 'passed' | 'flagged'
+  detail: string
+}
+
+export type QualityCheck = {
+  submission_id: string
+  assignment_id: string
+  submission_version: number
+  submission_status: SubmissionStatus
+  status: 'ready_for_review' | 'needs_attention' | 'already_reviewed'
+  score: number
+  checks: QualityCheckItem[]
+  disclaimer: string
+}
+
 export type Review = {
   id: string
   submission_id: string
