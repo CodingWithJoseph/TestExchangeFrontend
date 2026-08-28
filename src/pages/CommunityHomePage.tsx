@@ -74,9 +74,9 @@ export function CommunityHomePage() {
             <div><h3>Private by design</h3><p>Test builds, exact tasks, evidence, findings, and direct messages are never shown on public pages.</p></div>
           </section>
           <section className="community-side-card">
-            <div className="side-card-heading"><h3>Popular tags</h3><Link to="/tags">See all</Link></div>
+            <div className="side-card-heading"><h3>Popular categories</h3><Link to="/categories">See all</Link></div>
             <div className="popular-tags">
-              {popularTags.length ? popularTags.map((tag) => <Link key={tag.label} to={`/tests?tag=${encodeURIComponent(tag.label)}`}><span>{tag.label}</span><small>{tag.count}</small></Link>) : <p>Tags appear as campaigns are published.</p>}
+              {popularTags.length ? popularTags.map((tag) => <Link key={tag.label} to={`/tests?tag=${encodeURIComponent(tag.label)}`}><span>{tag.label}</span><small>{tag.count}</small></Link>) : <p>Categories appear as campaigns are published.</p>}
             </div>
           </section>
           <section className="community-side-card community-cta-card">

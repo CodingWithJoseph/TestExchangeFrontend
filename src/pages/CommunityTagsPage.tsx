@@ -9,7 +9,7 @@ import { usePageMetadata } from '../features/community/usePageMetadata'
 export function CommunityTagsPage() {
   const api = useApi()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  usePageMetadata('Testing tags', 'Browse TestExchange requests by platform, technology, and testing focus.')
+  usePageMetadata('Testing categories', 'Browse TestExchange requests by platform and software category.')
   useEffect(() => {
     let active = true
     void api.listPublicCampaigns().then((items) => { if (active) setCampaigns(items) }).catch(() => undefined)
@@ -23,7 +23,7 @@ export function CommunityTagsPage() {
   return (
     <div className="simple-public-page">
       <header className="simple-public-hero">
-        <div className="public-container"><span className="community-kicker">EXPLORE THE COMMUNITY</span><h1>Testing tags</h1><p>Find projects by platform, product surface, or the kind of problem they need help investigating.</p></div>
+        <div className="public-container"><span className="community-kicker">EXPLORE THE COMMUNITY</span><h1>Browse by category</h1><p>Find testing requests by software category or target platform.</p></div>
       </header>
       <div className="public-container tags-directory">
         {tags.map((tag) => (

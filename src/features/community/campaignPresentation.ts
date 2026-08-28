@@ -4,8 +4,15 @@ export function platformLabel(platform: Platform) {
   return platform === 'api' ? 'API' : platform.charAt(0).toUpperCase() + platform.slice(1)
 }
 
+export function categoryLabel(category: string) {
+  return category.trim().split(/\s+/).map((word) => {
+    if (word.length > 1 && word === word.toUpperCase()) return word
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  }).join(' ')
+}
+
 export function campaignTags(campaign: Campaign) {
-  return Array.from(new Set([campaign.category, platformLabel(campaign.platform)].filter(Boolean)))
+  return Array.from(new Set([categoryLabel(campaign.category), platformLabel(campaign.platform)].filter(Boolean)))
 }
 
 export function publishedLabel(campaign: Campaign) {

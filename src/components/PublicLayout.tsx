@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 
 const publicNav = [
   { to: '/tests', label: 'Tests' },
-  { to: '/tags', label: 'Tags' },
+  { to: '/categories', label: 'Categories' },
   { to: '/how-it-works', label: 'How it works' },
 ]
 
@@ -45,7 +45,7 @@ export function PublicLayout() {
               aria-label="Search public tests"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search tests and tags"
+              placeholder="Search tests and categories"
             />
           </form>
 
