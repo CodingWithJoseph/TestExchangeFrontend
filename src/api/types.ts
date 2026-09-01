@@ -4,6 +4,8 @@ export type AssignmentStatus = 'applied' | 'accepted' | 'in_progress' | 'submitt
 export type SubmissionStatus = 'submitted' | 'changes_requested' | 'approved' | 'rejected'
 export type ReviewDecision = 'approved' | 'changes_requested' | 'rejected'
 export type EvidenceKind = 'screenshot' | 'video' | 'log' | 'note' | 'link' | 'file'
+export type DisputeStatus = 'open' | 'under_review' | 'resolved' | 'rejected'
+export type DisputeRemedy = 'none' | 'award_tester'
 
 export type Profile = {
   id: string
@@ -23,9 +25,34 @@ export type ProfileInput = {
   avatar_url?: string | null
 }
 
+export type PublicProfile = Pick<Profile, 'id' | 'username' | 'display_name' | 'bio' | 'avatar_url'>
+
+export type AccountCapabilities = { is_moderator: boolean }
+
+export type BetaStatus = {
+  enabled: boolean
+  max_users: number
+  claimed_seats: number
+  remaining_seats: number
+  is_full: boolean
+}
+
+export type WaitlistEntry = {
+  id: string
+  email: string
+  created_at: string
+}
+
+export type ModerationParticipant = Profile & {
+  is_suspended: boolean
+  suspended_at: string | null
+  suspension_reason: string | null
+}
+
 export type Campaign = {
   id: string
   owner_id: string
+  owner_profile: PublicProfile
   name: string
   slug: string
   platform: Platform
@@ -42,6 +69,7 @@ export type Campaign = {
 }
 
 export type CampaignInput = Pick<Campaign, 'name' | 'slug' | 'platform' | 'category' | 'public_summary' | 'public_tester_requirements' | 'minimum_version' | 'target_testers' | 'reward_credits'>
+export type CampaignTransitionAction = 'pause' | 'resume' | 'close'
 
 export type ContractTask = {
   id: string
@@ -60,6 +88,8 @@ export type TestingContract = {
   device_requirements: string | null
   evidence_requirements: string
   review_window_hours: number
+  minimum_duration_days: number
+  required_sessions: number
   status: 'draft' | 'locked'
   locked_at: string | null
   tasks: ContractTask[]
@@ -71,13 +101,21 @@ export type ContractInput = {
   device_requirements?: string | null
   evidence_requirements: string
   review_window_hours: number
+  minimum_duration_days: number
+  required_sessions: number
   tasks: Array<Pick<ContractTask, 'title' | 'instructions' | 'evidence_required'>>
+}
+
+export type CampaignLaunchInput = {
+  campaign: CampaignInput
+  contract: ContractInput
 }
 
 export type Assignment = {
   id: string
   campaign_id: string
   tester_id: string
+  tester_profile: PublicProfile
   application_note: string | null
   status: AssignmentStatus
   accepted_at: string | null
@@ -158,11 +196,69 @@ export type CreditLedgerEntry = {
   transaction_id: string
   user_id: string
   delta: number
-  entry_type: 'signup_grant' | 'purchase' | 'reservation' | 'reward' | 'release' | 'refund' | 'adjustment'
+  entry_type: 'signup_grant' | 'purchase' | 'posting' | 'reservation' | 'reward' | 'release' | 'refund' | 'adjustment'
   reference_type: string | null
   reference_id: string | null
   note: string | null
   idempotency_key: string
   created_by: string | null
   created_at: string
+}
+
+export type Notification = {
+  id: string
+  user_id: string
+  kind: string
+  title: string
+  body: string
+  entity_type: string
+  entity_id: string
+  read_at: string | null
+  created_at: string
+}
+
+export type TestingSession = {
+  id: string
+  assignment_id: string
+  session_date: string
+  note: string | null
+  created_at: string
+}
+
+export type Dispute = {
+  id: string
+  assignment_id: string
+  submission_id: string | null
+  opened_by: string
+  reason: string
+  status: DisputeStatus
+  assigned_to: string | null
+  assigned_at: string | null
+  resolution: string | null
+  remedy: DisputeRemedy | null
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AuditEvent = {
+  id: string
+  actor_id: string | null
+  action: string
+  entity_type: string
+  entity_id: string
+  details: Record<string, unknown>
+  created_at: string
+}
+
+export type ModerationCase = {
+  dispute: Dispute
+  assignment: Assignment
+  campaign: Campaign
+  contract: TestingContract
+  submissions: Submission[]
+  reviews: Review[]
+  messages: PrivateMessage[]
+  audit_events: AuditEvent[]
 }

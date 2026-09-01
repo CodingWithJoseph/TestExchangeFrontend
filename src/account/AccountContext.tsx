@@ -7,6 +7,8 @@ import { useAuth } from '../auth/AuthContext'
 type AccountContextValue = {
   profile: Profile | null
   balance: number
+  isModerator: boolean
+  unreadNotifications: number
   isLoading: boolean
   error: string | null
   refreshAccount: () => Promise<void>
@@ -24,6 +26,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const { user, accessToken } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [balance, setBalance] = useState(0)
+  const [isModerator, setIsModerator] = useState(false)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,6 +35,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!user || !accessToken) {
       setProfile(null)
       setBalance(0)
+      setIsModerator(false)
+      setUnreadNotifications(0)
       return
     }
 
@@ -47,9 +53,15 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           display_name: user.name,
         })
       }
-      const creditBalance = await api.getCreditBalance()
+      const [creditBalance, capabilities, notifications] = await Promise.all([
+        api.getCreditBalance(),
+        api.getCapabilities(),
+        api.listNotifications(),
+      ])
       setProfile(nextProfile)
       setBalance(creditBalance.balance)
+      setIsModerator(capabilities.is_moderator)
+      setUnreadNotifications(notifications.filter((item) => !item.read_at).length)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load your TestExchange account.')
     } finally {
@@ -59,7 +71,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void refreshAccount() }, [refreshAccount])
 
-  const value = useMemo(() => ({ profile, balance, isLoading, error, refreshAccount }), [balance, error, isLoading, profile, refreshAccount])
+  const value = useMemo(() => ({ profile, balance, isModerator, unreadNotifications, isLoading, error, refreshAccount }), [balance, error, isLoading, isModerator, profile, refreshAccount, unreadNotifications])
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
 }
 

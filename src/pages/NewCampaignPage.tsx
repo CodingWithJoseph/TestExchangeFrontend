@@ -179,31 +179,34 @@ export function NewCampaignPage() {
     setPublishError(null)
     try {
       const slugBase = draft.projectName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'test'
-      const campaign = await api.createCampaign({
-        name: draft.projectName.trim(),
-        slug: `${slugBase}-${Date.now().toString(36)}`,
-        platform: draft.platform.toLowerCase() as 'android' | 'ios' | 'web' | 'desktop' | 'api',
-        category: draft.category,
-        public_summary: draft.publicSummary.trim(),
-        public_tester_requirements: draft.targetAudience.trim(),
-        minimum_version: draft.minimumEnvironment || null,
-        target_testers: draft.testerGoal,
-        reward_credits: draft.creditsPerTester,
-      })
       const evidenceRequirements = [
         'Structured written feedback for every required task.',
         draft.evidence.screenshots ? 'Include screenshots when they clarify an issue.' : '',
         draft.evidence.crashDetails ? 'Include exact crash or error details when relevant.' : '',
       ].filter(Boolean).join(' ')
-      await api.saveContract(campaign.id, {
-        tester_instructions: `Complete ${draft.sessionCount} testing ${draft.sessionCount === 1 ? 'session' : 'sessions'} across the agreed ${draft.retentionDays}-day testing period. ${draft.publicSummary.trim()}`,
-        access_instructions: draft.accessUrl.trim(),
-        device_requirements: [draft.minimumEnvironment, draft.environmentNotes.trim()].filter(Boolean).join('. '),
-        evidence_requirements: evidenceRequirements,
-        review_window_hours: draft.reviewWindowHours,
-        tasks: draft.tasks.map((task) => ({ title: task.trim().slice(0, 160), instructions: task.trim(), evidence_required: true })),
+      const campaign = await api.launchCampaign({
+        campaign: {
+          name: draft.projectName.trim(),
+          slug: `${slugBase}-${Date.now().toString(36)}`,
+          platform: draft.platform.toLowerCase() as 'android' | 'ios' | 'web' | 'desktop' | 'api',
+          category: draft.category,
+          public_summary: draft.publicSummary.trim(),
+          public_tester_requirements: draft.targetAudience.trim(),
+          minimum_version: draft.minimumEnvironment || null,
+          target_testers: draft.testerGoal,
+          reward_credits: draft.creditsPerTester,
+        },
+        contract: {
+          tester_instructions: `Complete ${draft.sessionCount} testing ${draft.sessionCount === 1 ? 'session' : 'sessions'} across the agreed ${draft.retentionDays}-day testing period. ${draft.publicSummary.trim()}`,
+          access_instructions: draft.accessUrl.trim(),
+          device_requirements: [draft.minimumEnvironment, draft.environmentNotes.trim()].filter(Boolean).join('. '),
+          evidence_requirements: evidenceRequirements,
+          review_window_hours: draft.reviewWindowHours,
+          minimum_duration_days: draft.retentionDays,
+          required_sessions: draft.sessionCount,
+          tasks: draft.tasks.map((task) => ({ title: task.trim().slice(0, 160), instructions: task.trim(), evidence_required: true })),
+        },
       })
-      await api.publishCampaign(campaign.id)
       deleteCampaignDraft(draft.id)
       await refreshAccount()
       navigate(`/console/my-campaigns/${campaign.id}`, { state: { createdCampaign: campaign.name } })
@@ -264,7 +267,7 @@ export function NewCampaignPage() {
                 <label className="builder-field"><span>Category</span><select value={draft.category} onChange={(event) => updateDraft('category', event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
                 <label className={`builder-field ${fieldHasError('projectIdentifier', draft.projectIdentifier) ? 'has-error' : ''}`}><span>{platformField.identifierLabel} {draft.platform === 'Android' && <i>Required</i>}</span><input aria-invalid={fieldHasError('projectIdentifier', draft.projectIdentifier)} value={draft.projectIdentifier} onChange={(event) => updateDraft('projectIdentifier', event.target.value)} placeholder={platformField.identifierPlaceholder} /><small className={fieldHasError('projectIdentifier', draft.projectIdentifier) ? 'field-error' : ''}>{fieldHasError('projectIdentifier', draft.projectIdentifier) ? stepErrors.projectIdentifier : platformField.identifierHelp}</small></label>
                 <label className="builder-field"><span>{platformField.environmentLabel}</span><select value={draft.minimumEnvironment} onChange={(event) => updateDraft('minimumEnvironment', event.target.value)}>{platformField.environments.map((environment) => <option key={environment}>{environment}</option>)}</select></label>
-                <label className="builder-field"><span>Listing visibility</span><select value={draft.visibility} onChange={(event) => updateDraft('visibility', event.target.value as CampaignDraft['visibility'])}><option>Public</option><option>Members only</option><option>Invite only</option></select><small>Private test materials are never included in listings.</small></label>
+                <label className="builder-field"><span>Listing visibility</span><div className="readonly-field"><strong>Public recruitment brief</strong><span>Public beta</span></div><small>Only the recruitment brief is public. The contract, access details, evidence, and messages remain private.</small></label>
                 <label className={`builder-field ${fieldHasError('publicSummary') ? 'has-error' : ''}`}><span>Recruitment brief <i>Required</i></span><textarea aria-invalid={fieldHasError('publicSummary')} rows={3} value={draft.publicSummary} onChange={(event) => updateDraft('publicSummary', event.target.value)} placeholder="Describe the general problem and testing goal without revealing private implementation details." />{fieldHasError('publicSummary') ? <small className="field-error">{stepErrors.publicSummary}</small> : <small>This is the only testing description included in the public or member listing.</small>}</label>
                 <label className={`builder-field full ${fieldHasError('accessUrl', draft.accessUrl) ? 'has-error' : ''}`}><span>{platformField.accessLabel} <i>Required</i></span><input aria-invalid={fieldHasError('accessUrl', draft.accessUrl)} type="url" value={draft.accessUrl} onChange={(event) => updateDraft('accessUrl', event.target.value)} placeholder={platformField.accessPlaceholder} /><small className={fieldHasError('accessUrl', draft.accessUrl) ? 'field-error' : ''}>{fieldHasError('accessUrl', draft.accessUrl) ? stepErrors.accessUrl : 'Private access is shown only to signed-in testers accepted into the campaign.'}</small></label>
                 <label className={`builder-field full ${fieldHasError('targetAudience') ? 'has-error' : ''}`}><span>Who should test this project? <i>Required</i></span><textarea aria-invalid={fieldHasError('targetAudience')} rows={4} value={draft.targetAudience} onChange={(event) => updateDraft('targetAudience', event.target.value)} placeholder="Describe the intended user, their experience level, and the situation where they would use the software." />{fieldHasError('targetAudience') && <small className="field-error">{stepErrors.targetAudience}</small>}</label>
@@ -295,7 +298,7 @@ export function NewCampaignPage() {
 
               <div className="contract-schedule">
                 <label className="builder-field"><span>Sessions per tester</span><select value={draft.sessionCount} onChange={(event) => updateDraft('sessionCount', Number(event.target.value))}><option value={1}>1 session</option><option value={2}>2 sessions</option><option value={3}>3 sessions</option><option value={4}>4 sessions</option><option value={5}>5 sessions</option></select><small>Use separate sessions only when returning later matters to the test.</small></label>
-                <label className="builder-field"><span>{draft.platform === 'Android' ? 'Continuous participation period' : 'Testing period'}</span>{draft.platform === 'Android' ? <div className="readonly-field"><strong>{draft.retentionDays} days</strong><span>Android template</span></div> : <select value={draft.retentionDays} onChange={(event) => updateDraft('retentionDays', Number(event.target.value))}><option value={1}>1 day</option><option value={3}>3 days</option><option value={7}>7 days</option><option value={14}>14 days</option></select>}<small>Credits remain pending until the agreed period and work are complete.</small></label>
+                <label className="builder-field"><span>{draft.platform === 'Android' ? 'Continuous participation period' : 'Testing period'}</span>{draft.platform === 'Android' ? <div className="readonly-field"><strong>{draft.retentionDays} days</strong><span>Android template</span></div> : <select value={draft.retentionDays} onChange={(event) => updateDraft('retentionDays', Number(event.target.value))}><option value={1}>1 day</option><option value={3}>3 days</option><option value={7}>7 days</option><option value={14}>14 days</option></select>}<small>Testers cannot submit before the agreed period and required sessions are complete.</small></label>
               </div>
 
               <div className="task-builder">
@@ -349,11 +352,11 @@ export function NewCampaignPage() {
 
               <div className="builder-form-grid compact">
                 <label className="builder-field"><span>Tester goal</span><input type="number" min={minimumTesterGoal} max={100} value={draft.testerGoal} onChange={(event) => updateDraft('testerGoal', Number(event.target.value))} /><small>{draft.platform === 'Android' ? 'The Android closed-testing template starts at 12.' : 'Choose the number of independent perspectives this test needs.'}</small></label>
-                <label className="builder-field"><span>Credits per tester</span><select value={draft.creditsPerTester} onChange={(event) => updateDraft('creditsPerTester', Number(event.target.value))}><option value={1}>1 credit</option><option value={2}>2 credits</option><option value={3}>3 credits</option><option value={4}>4 credits</option><option value={5}>5 credits</option></select><small>Reserved now; released after approved completion.</small></label>
-                <label className="builder-field"><span>Developer review window</span><select value={draft.reviewWindowHours} onChange={(event) => updateDraft('reviewWindowHours', Number(event.target.value))}><option value={24}>24 hours</option><option value={48}>48 hours</option><option value={72}>72 hours</option></select><small>Late reviews move to dispute protection.</small></label>
+                <label className="builder-field"><span>Credits per tester</span><select value={draft.creditsPerTester} onChange={(event) => updateDraft('creditsPerTester', Number(event.target.value))}><option value={1}>1 credit</option><option value={2}>2 credits</option><option value={3}>3 credits</option><option value={4}>4 credits</option><option value={5}>5 credits</option></select><small>Spent when published; awarded after approved completion.</small></label>
+                <label className="builder-field"><span>Developer review target</span><select value={draft.reviewWindowHours} onChange={(event) => updateDraft('reviewWindowHours', Number(event.target.value))}><option value={24}>24 hours</option><option value={48}>48 hours</option><option value={72}>72 hours</option></select><small>This is the response time you promise testers; beta reminders are manual.</small></label>
               </div>
 
-              <aside className="protection-card"><ShieldCheck size={20} /><div><strong>Built-in tester protection</strong><p>Rejections require a contract-based reason. Requirements cannot be added later, and expired reviews can be escalated with the full audit trail.</p></div></aside>
+              <aside className="protection-card"><ShieldCheck size={20} /><div><strong>Built-in tester protection</strong><p>Rejections require a contract-based reason, requirements cannot be added later, and rejected work can be disputed with the full audit trail.</p></div></aside>
             </div>
           )}
 
@@ -368,7 +371,7 @@ export function NewCampaignPage() {
                 <div className="contract-preview-head"><span className="app-icon mint">{draft.projectName.slice(0, 2).toUpperCase() || 'PR'}</span><div><span>{draft.platform.toUpperCase()} SOFTWARE TEST</span><h3>{draft.projectName || 'Untitled project'}</h3><p>{draft.projectIdentifier || 'Build identifier not provided'} · {draft.minimumEnvironment}</p></div><span className="status-pill draft">Draft</span></div>
                 <div className="contract-preview-grid">
                   <div><span><Users size={15} /> TESTER COMMITMENT</span><strong>{draft.sessionCount} {draft.sessionCount === 1 ? 'session' : 'sessions'} across {draft.retentionDays} {draft.retentionDays === 1 ? 'day' : 'days'}</strong><p>Maintain access as required and complete all listed tasks.</p></div>
-                  <div><span><CircleDollarSign size={15} /> REWARD</span><strong>{draft.creditsPerTester} credits per tester</strong><p>{reservedCredits} credits reserved for {draft.testerGoal} completed contracts.</p></div>
+                  <div><span><CircleDollarSign size={15} /> REWARD</span><strong>{draft.creditsPerTester} credits per tester</strong><p>{reservedCredits} credits are spent when this campaign is published.</p></div>
                   <div><span><ClipboardCheck size={15} /> SUBMISSION</span><strong>Tasks + structured feedback</strong><p>{draft.evidence.screenshots ? 'Screenshots, ' : ''}{draft.evidence.featureChecklist ? 'feature checklist, ' : ''}and issue details when relevant.</p></div>
                   <div><span><Bot size={15} /> QUALITY REVIEW</span><strong>{draft.aiPrecheckEnabled ? 'Automated pre-check + developer review' : 'Developer review'}</strong><p>Developer response due within {draft.reviewWindowHours} hours.</p></div>
                 </div>
@@ -377,13 +380,13 @@ export function NewCampaignPage() {
                 <div className="contract-audience"><strong>Intended tester</strong><p>{draft.targetAudience}</p>{draft.environmentNotes && <small>{draft.environmentNotes}</small>}</div>
               </section>
 
-              <label className="agreement-row"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box"><Check size={14} /></span><div><strong>I agree to review testers against this contract.</strong><p>I understand that requirements cannot be added after testers join and that TestExchange rewards testing work rather than ratings, promotion, or platform approval.</p></div></label>
+              <label className="agreement-row"><input type="checkbox" checked={agreement} onChange={(event) => setAgreement(event.target.checked)} /><span className="check-box"><Check size={14} /></span><div><strong>I accept the <Link to="/terms" target="_blank">Beta Terms</Link> and <Link to="/acceptable-use" target="_blank">Acceptable Use Policy</Link>, and understand publishing permanently spends {reservedCredits} credits.</strong><p>Pausing or closing recruitment will not return credits. Accepted testers can continue, I will review them against this locked contract, and TestExchange rewards testing work rather than ratings, promotion, or platform approval.</p></div></label>
             </div>
           )}
 
           <footer className="builder-actions">
             <button className="button button-outline" type="button" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}><ArrowLeft size={16} /> Back</button>
-            <span className={showStepErrors && !stepIsValid ? 'validation-hint' : ''}>{showStepErrors && !stepIsValid ? Object.values(stepErrors)[0] : step < 4 ? 'Changes save automatically in this browser.' : `${reservedCredits} credits will be reserved.`}</span>
+            <span className={showStepErrors && !stepIsValid ? 'validation-hint' : ''}>{showStepErrors && !stepIsValid ? Object.values(stepErrors)[0] : step < 4 ? 'Changes save automatically in this browser.' : `${reservedCredits} credits will be spent permanently.`}</span>
             {step < 4 ? (
               <button className="button button-dark" type="button" onClick={goNext}>Continue <ArrowRight size={16} /></button>
             ) : (
@@ -397,13 +400,13 @@ export function NewCampaignPage() {
           <h2>{draft.projectName || 'Untitled campaign'}</h2>
           <p>{draft.platform} · {draft.category} · {draft.minimumEnvironment}</p>
           <div className="summary-credit-row"><span>Credits available</span><strong>{availableCredits}</strong></div>
-          <div className="summary-credit-row"><span>Credits to reserve</span><strong className={reservedCredits > availableCredits ? 'negative' : ''}>{reservedCredits}</strong></div>
+          <div className="summary-credit-row"><span>Publishing cost</span><strong className={reservedCredits > availableCredits ? 'negative' : ''}>{reservedCredits}</strong></div>
           <div className="summary-divider" />
           <ul>
             <li><Users size={15} /><span><strong>{draft.testerGoal} testers</strong><small>Campaign goal</small></span></li>
             <li><ClipboardCheck size={15} /><span><strong>{draft.tasks.length} required tasks</strong><small>{draft.sessionCount} sessions each</small></span></li>
             <li><ShieldCheck size={15} /><span><strong>{draft.retentionDays}-day period</strong><small>{draft.platform === 'Android' ? 'Continuous participation' : 'Testing window'}</small></span></li>
-            <li><Bot size={15} /><span><strong>{draft.aiPrecheckEnabled ? 'Quality pre-check on' : 'Manual review only'}</strong><small>Developer decides or dispute escalates</small></span></li>
+            <li><Bot size={15} /><span><strong>{draft.aiPrecheckEnabled ? 'Quality pre-check on' : 'Manual review only'}</strong><small>Developer decides; rejected work can be disputed</small></span></li>
           </ul>
           {reservedCredits > availableCredits ? (
             <div className="summary-warning"><Info size={15} /> You need {reservedCredits - availableCredits} more credits or a lower reward.</div>

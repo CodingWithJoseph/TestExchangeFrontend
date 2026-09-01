@@ -16,7 +16,7 @@ export function CommunityTestRow({ test }: { test: Campaign }) {
           <span className="app-icon mint">{test.name.slice(0, 2).toUpperCase()}</span>
           <div>
             <Link to={`/tests/${test.slug}`}><h2>{test.name}</h2></Link>
-            <p>{test.name} · {test.category}</p>
+            <p>{test.owner_profile.display_name} · {test.category}</p>
           </div>
           <span className="community-status open">Open</span>
         </div>

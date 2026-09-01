@@ -10,8 +10,6 @@ const SUPPORTED_EVIDENCE_TYPES = new Set([
   'image/webp',
   'video/mp4',
   'text/plain',
-  'application/pdf',
-  'application/zip',
 ])
 
 export function evidenceAcceptAttribute() {
@@ -62,6 +60,12 @@ export async function uploadEvidenceFile(assignmentId: string, file: File) {
   })
   if (error) throw new Error(`Unable to upload ${file.name}: ${error.message}`)
   return path
+}
+
+export async function removeEvidenceFiles(storageKeys: string[]) {
+  if (!supabase || storageKeys.length === 0) return
+  const { error } = await supabase.storage.from(EVIDENCE_BUCKET).remove(storageKeys)
+  if (error) throw new Error(`Unable to clean up evidence uploads: ${error.message}`)
 }
 
 export async function createEvidenceSignedUrl(storageKey: string) {

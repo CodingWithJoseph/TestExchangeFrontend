@@ -8,7 +8,7 @@ export function TestCard({ test, onStart }: { test: Campaign; onStart?: (test: C
         <span className="app-icon mint">{test.name.slice(0, 2).toUpperCase()}</span>
         <div className="test-title">
           <div className="title-with-badge"><h3>{test.name}</h3></div>
-          <p>{test.platform} · {test.category}</p>
+          <p>{test.platform} · {test.category} · {test.owner_profile.display_name}</p>
         </div>
         <span className="credit-reward">+{test.reward_credits} cr</span>
       </div>

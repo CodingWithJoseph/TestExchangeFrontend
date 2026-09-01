@@ -1,5 +1,5 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApi } from '../api/ApiContext'
 import type { Campaign } from '../api/types'
@@ -22,6 +22,7 @@ export function AvailableTestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [joining, setJoining] = useState(false)
+  const modalRef = useRef<HTMLElement>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -38,6 +39,36 @@ export function AvailableTestsPage() {
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
   }, [api, searchParams, user?.id])
+
+  useEffect(() => {
+    if (!selected) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    const modal = modalRef.current
+    modal?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelected(null)
+        return
+      }
+      if (event.key !== 'Tab' || !modal) return
+      const focusable = Array.from(modal.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href]'))
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocus?.focus()
+    }
+  }, [selected])
 
   const openTest = (test: Campaign) => {
     setAgreement(false)
@@ -84,7 +115,7 @@ export function AvailableTestsPage() {
 
       {selected && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
-          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="test-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section ref={modalRef} tabIndex={-1} className="modal" role="dialog" aria-modal="true" aria-labelledby="test-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="icon-button modal-close" onClick={() => setSelected(null)} aria-label="Close"><X size={20} /></button>
             <span className="app-icon large mint">{selected.name.slice(0, 2).toUpperCase()}</span>
             <span className="section-kicker">{selected.platform} · {selected.category}</span>

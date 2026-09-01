@@ -8,6 +8,8 @@ The MVP frontend for TestExchange: a community where software builders test real
 - Public test directory with search, platform filters, tags, and sorting
 - Shareable public test briefs with explicit privacy boundaries
 - Public tag directory and testing-process guide
+- Capped public-beta registration with a waitlist when the cohort is full or paused
+- Public beta terms, privacy notice, acceptable-use rules, and support instructions
 - Protected actions that return visitors to the intended flow after sign-in
 - Private builds, exact contract tasks, evidence, findings, and conversations remain inside authenticated workspaces
 
@@ -17,9 +19,10 @@ The MVP frontend for TestExchange: a community where software builders test real
 - Available Tests with search, filters, test briefs, and credit rewards
 - My Tests with review and completion states
 - My Campaigns with tester progress and campaign status
-- Four-step campaign contract builder covering tester fit, required tasks, evidence, review rules, and reserved credits
+- Four-step campaign contract builder covering tester fit, required tasks, evidence, review targets, and permanent publishing cost
 - Tester workspaces with locked contracts, evidence, correction requests, private messages, and protected credit status
-- Developer campaign management with access actions, tester progress, submission review, advisory quality checks, and approval or dispute decisions
+- Developer campaign management with recruitment pause/resume/close, accept/decline actions, tester progress, submission review, advisory quality checks, and approval or dispute decisions
+- Tester withdrawal controls and moderator participant suspension/restoration
 - Credits with an activity ledger and one-time pack placeholders
 - Profile backed by the authenticated user’s API record
 
@@ -35,6 +38,7 @@ Quality checks:
 
 ```bash
 npm run check
+npm test
 npm run build
 ```
 
@@ -44,13 +48,18 @@ Create `.env` from `.env.example` and add the frontend-safe Supabase values:
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 VITE_API_URL=http://127.0.0.1:8000
+VITE_SUPPORT_EMAIL=support@example.com
 ```
 
 Never put the Supabase database password or service-role key in this frontend file.
 
 ## Authentication and API
 
-The console uses Supabase email/password Auth. Community campaign pages call the backend’s anonymous read endpoints, while protected requests attach the current Supabase access token. The backend creates the TestExchange profile and signup credit account when a signed-in user first enters the console.
+The console uses Supabase email/password Auth with confirmed email. Community campaign pages and
+the public-beta capacity/waitlist calls are anonymous, while protected requests attach the current
+Supabase access token. The backend atomically claims a capped beta seat, creates the TestExchange
+profile, and grants starting credits when a signed-in user first enters the console. If the cohort
+is full, the login page switches account creation to the waitlist.
 
 Run the backend on port `8000` and this Vite application on port `5173`. For local two-account testing, create one developer and one tester account (two browser profiles make switching easier), then follow this sequence:
 
@@ -59,7 +68,7 @@ Run the backend on port `8000` and this Vite application on port `5173`. For loc
 3. Developer accepts the tester from the campaign workspace.
 4. Tester starts the assignment, completes contract tasks, and submits evidence.
 5. Developer approves, requests changes, or rejects the submission.
-6. An approval transfers the reserved reward and both credit ledgers reflect it.
+6. An approval issues the promised tester reward and both credit ledgers reflect the campaign spend and reward.
 
 ## Current data boundary
 

@@ -4030,3 +4030,316 @@ button:focus-visible,
 a:focus-visible {
   outline-color: rgba(11, 87, 208, .5);
 }
+
+.campaign-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+
+.campaign-controls small {
+  flex: 1 1 320px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.dispute-panel .decision-form {
+  max-width: none;
+}
+
+.participation-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #c9d8f2;
+  border-radius: 11px;
+  background: var(--primary-soft);
+}
+
+.participation-card p,
+.participation-card small {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.participation-card > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.participation-card input {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.notification-list > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 15px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  text-align: left;
+  background: white;
+}
+
+.notification-list > button.unread {
+  background: #f5f8ff;
+}
+
+.notification-list > button:hover {
+  background: var(--primary-soft);
+}
+
+.notification-list p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.notification-list small {
+  color: var(--soft-muted);
+}
+
+.notification-list i {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.notification-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--primary-dark);
+  background: var(--primary-soft);
+}
+
+.moderation-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, .75fr) minmax(0, 1.6fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.moderation-queue,
+.moderation-case {
+  min-width: 0;
+}
+
+.moderation-queue > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  color: inherit;
+  text-align: left;
+  background: white;
+}
+
+.moderation-queue > button:hover,
+.moderation-queue > button.selected {
+  background: var(--primary-soft);
+}
+
+.moderation-queue > button strong,
+.moderation-queue > button small {
+  display: block;
+}
+
+.moderation-queue > button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moderation-queue > button small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.moderation-case {
+  padding: 20px;
+}
+
+.moderation-case > * + * {
+  margin-top: 16px;
+}
+
+.moderation-submission {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.moderation-submission > div {
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--canvas);
+  overflow-wrap: anywhere;
+}
+
+.moderation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .moderation-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .moderation-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inline-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.button-ghost {
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+}
+
+.button-ghost:hover:not(:disabled) {
+  color: var(--danger);
+  background: #fff3f1;
+}
+
+.moderation-tabs {
+  padding-inline: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: white;
+}
+
+.moderation-directory {
+  overflow: hidden;
+}
+
+.moderation-directory-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.moderation-directory-row strong,
+.moderation-directory-row small,
+.moderation-directory-row em {
+  display: block;
+}
+
+.moderation-directory-row small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.moderation-directory-row em {
+  margin-top: 5px;
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.moderation-directory-row.waitlist-row {
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.policy-page {
+  padding-block: 58px 80px;
+}
+
+.policy-page > header {
+  max-width: 760px;
+  margin-bottom: 24px;
+}
+
+.policy-page h1 {
+  margin: 8px 0 7px;
+  font-size: clamp(34px, 5vw, 54px);
+  letter-spacing: -2px;
+}
+
+.policy-page header p,
+.policy-card p {
+  color: var(--muted);
+}
+
+.policy-card {
+  max-width: 860px;
+  padding: clamp(22px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.policy-card h2 {
+  margin: 30px 0 8px;
+  font-size: 18px;
+}
+
+.policy-card h2:first-child {
+  margin-top: 0;
+}
+
+.policy-card p {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.policy-card p + p {
+  margin-top: 14px;
+}
+
+.policy-card a,
+.agreement-row a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .public-footer nav {
+    flex-wrap: wrap;
+  }
+
+  .moderation-directory-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .moderation-directory-row > .status-pill,
+  .moderation-directory-row > .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
