@@ -49,9 +49,16 @@ VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 VITE_API_URL=http://127.0.0.1:8000
 VITE_SUPPORT_EMAIL=support@example.com
+VITE_SENTRY_DSN=https://public-key@organization.ingest.sentry.io/project
+VITE_SENTRY_RELEASE=testexchange-web@commit-sha
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.05
 ```
 
 Never put the Supabase database password or service-role key in this frontend file.
+
+Production builds can upload hidden source maps by setting the build-only `SENTRY_AUTH_TOKEN`,
+`SENTRY_ORG`, and `SENTRY_PROJECT` values. These values must not use the `VITE_` prefix. The build
+deletes source-map files after upload so they are not published with the site.
 
 ## Authentication and API
 
