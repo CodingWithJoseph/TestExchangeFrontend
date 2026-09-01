@@ -15,6 +15,7 @@ const packs = [
 const ledgerLabels: Record<CreditLedgerEntry['entry_type'], string> = {
   signup_grant: 'Welcome credits',
   purchase: 'Credits purchased',
+  posting: 'Campaign published',
   reservation: 'Campaign reward pool',
   reward: 'Test reward',
   release: 'Reserved reward released',
@@ -40,10 +41,10 @@ export function CreditsPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="YOUR BALANCE" title="Credits" description="Earn credits by testing software or buy only what you need. No subscriptions." />
+      <PageHeader eyebrow="YOUR BALANCE" title="Credits" description="Earn credits by completing approved software tests and spend them to publish your own campaign." />
       <section className="credit-hero">
         <div><span>Available balance</span><strong>{balance}</strong><small>credits</small></div>
-        <div className="credit-hero-copy"><Coins size={26} /><div><strong>Your testing has real value</strong><p>Approved testing work moves reserved credits from a developer to the tester.</p></div></div>
+        <div className="credit-hero-copy"><Coins size={26} /><div><strong>Your testing has real value</strong><p>Campaign credits are spent at publication; approved testing work earns the promised reward.</p></div></div>
         <Link className="button button-light" to="/console/available-tests">Earn credits <ArrowRight size={16} /></Link>
       </section>
       <div className="credits-layout">

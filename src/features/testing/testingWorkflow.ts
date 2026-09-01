@@ -251,7 +251,7 @@ export const calmCardsSubmission: CampaignSubmission = {
     { label: 'Possible issue needs developer review', status: 'flagged', detail: 'Favorites count may not update immediately after removing a card.' },
   ],
   messages: [
-    { id: 'cc-system-1', author: 'TestExchange', role: 'system', body: 'Maya submitted the testing contract. 2 reserved credits remain held during review.', time: '2h ago' },
+    { id: 'cc-system-1', author: 'TestExchange', role: 'system', body: 'Maya submitted the testing contract. The 2-credit tester reward is awaiting a decision.', time: '2h ago' },
     { id: 'cc-tester-1', author: 'Maya Chen', role: 'tester', body: 'I can send a short screen recording if the favorites-count issue is difficult to reproduce.', time: '1h ago' },
   ],
 }

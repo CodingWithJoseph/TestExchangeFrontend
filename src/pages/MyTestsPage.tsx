@@ -20,10 +20,12 @@ export function MyTestsPage() {
 
   useEffect(() => {
     let active = true
-    void Promise.all([api.listAssignments(), api.listPublicCampaigns()])
-      .then(([assignmentItems, campaignItems]) => {
+    void api.listAssignments()
+      .then(async (assignmentItems) => {
+        const testerAssignments = assignmentItems.filter((item) => item.tester_id === user?.id)
+        const campaignItems = await Promise.all(testerAssignments.map((item) => api.getAssignmentCampaign(item.id)))
         if (!active) return
-        setAssignments(assignmentItems.filter((item) => item.tester_id === user?.id))
+        setAssignments(testerAssignments)
         setCampaigns(campaignItems)
       })
       .catch((requestError) => { if (active) setError(requestError instanceof Error ? requestError.message : 'Unable to load assignments.') })

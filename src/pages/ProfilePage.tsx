@@ -1,5 +1,6 @@
 import { CheckCircle2, UserRound } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAccount } from '../account/AccountContext'
 import { useApi } from '../api/ApiContext'
 import { useAuth } from '../auth/AuthContext'
@@ -48,7 +49,7 @@ export function ProfilePage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Choose how you appear inside the private testing community." />
+      <PageHeader eyebrow="ACCOUNT" title="Profile" description="Choose how you appear in the public-beta testing community." />
       <form className="profile-layout" onSubmit={(event) => void saveProfile(event)}>
         <section className="panel form-panel">
           <div className="form-section-heading"><div><span className="avatar large-avatar">{displayName.slice(0, 2).toUpperCase() || 'TE'}</span><div><h2>{displayName || 'TestExchange member'}</h2><p>Member since {profile ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '—'}</p></div></div><span className="verified-label"><CheckCircle2 size={15} /> Authenticated account</span></div>
@@ -65,7 +66,12 @@ export function ProfilePage() {
         <aside className="profile-side">
           <section className="panel device-panel">
             <div className="form-section-heading"><div><span className="round-icon"><UserRound size={18} /></span><div><h2>Private account details</h2><p>Only your public profile fields are editable here.</p></div></div></div>
-            <p className="muted">Device profiles and notification preferences will be added when matching and notifications are implemented. This page only saves fields supported by the current backend.</p>
+            <p className="muted">Your display name, username, bio, and avatar can appear publicly. Your email, private contracts, evidence, and conversations are not shown on your public profile.</p>
+          </section>
+          <section className="panel device-panel">
+            <div className="form-section-heading"><div><span className="round-icon"><UserRound size={18} /></span><div><h2>Data and account requests</h2><p>Export, correction, or deletion</p></div></div></div>
+            <p className="muted">During the beta, verified account and privacy requests are handled manually so campaign, credit, dispute, and audit obligations can be reviewed safely.</p>
+            <div className="inline-actions"><Link className="button button-outline" to="/privacy">Privacy notice</Link><Link className="button button-dark" to="/support">Contact support</Link></div>
           </section>
         </aside>
       </form>

@@ -5,7 +5,7 @@ export type CampaignEvidence = {
 }
 
 export type CampaignPlatform = 'Android' | 'iOS' | 'Web' | 'Desktop' | 'API'
-export type CampaignVisibility = 'Public' | 'Members only' | 'Invite only'
+export type CampaignVisibility = 'Public'
 
 export type CampaignDraft = {
   id: string
@@ -82,7 +82,7 @@ function normalizeCampaignDraft(stored: LegacyCampaignDraft): CampaignDraft {
     ...stored,
     projectName: stored.projectName ?? stored.appName ?? '',
     platform: stored.platform ?? 'Android',
-    visibility: stored.visibility ?? 'Public',
+    visibility: 'Public',
     projectIdentifier: stored.projectIdentifier ?? stored.packageName ?? '',
     accessUrl: stored.accessUrl ?? stored.optInUrl ?? '',
     minimumEnvironment: stored.minimumEnvironment ?? stored.minimumAndroid ?? 'Android 10+',

@@ -12,13 +12,17 @@ import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyCampaignsPage } from './pages/MyCampaignsPage'
 import { MyTestsPage } from './pages/MyTestsPage'
+import { ModerationPage } from './pages/ModerationPage'
 import { NewCampaignPage } from './pages/NewCampaignPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { HowItWorksPage } from './pages/HowItWorksPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PublicTestDetailPage } from './pages/PublicTestDetailPage'
 import { PublicTestsPage } from './pages/PublicTestsPage'
 import { SubmissionReviewPage } from './pages/SubmissionReviewPage'
 import { TestWorkspacePage } from './pages/TestWorkspacePage'
+import { AcceptableUsePage, PrivacyPage, SupportPage, TermsPage } from './pages/LegalPage'
 
 export function App() {
   return (
@@ -30,6 +34,10 @@ export function App() {
         <Route path="categories" element={<CommunityTagsPage />} />
         <Route path="tags" element={<Navigate to="/categories" replace />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
+        <Route path="terms" element={<TermsPage />} />
+        <Route path="privacy" element={<PrivacyPage />} />
+        <Route path="acceptable-use" element={<AcceptableUsePage />} />
+        <Route path="support" element={<SupportPage />} />
       </Route>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
@@ -45,10 +53,12 @@ export function App() {
             <Route path="my-campaigns/:campaignId/submissions/:submissionId" element={<SubmissionReviewPage />} />
             <Route path="credits" element={<CreditsPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="moderation" element={<ModerationPage />} />
           </Route>
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

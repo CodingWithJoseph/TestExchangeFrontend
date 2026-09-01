@@ -1,10 +1,13 @@
 import {
   BadgeDollarSign,
+  Bell,
   ClipboardCheck,
   FlaskConical,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
+  Scale,
   Rocket,
   UserRound,
   X,
@@ -26,7 +29,7 @@ const navItems = [
 export function ConsoleLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
-  const { profile, balance } = useAccount()
+  const { profile, balance, isModerator, unreadNotifications } = useAccount()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
@@ -69,6 +72,9 @@ export function ConsoleLayout() {
               <span>{label}</span>
             </NavLink>
           ))}
+          <NavLink to="/console/notifications" onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}><Bell size={18} strokeWidth={1.9} /><span>Notifications</span>{unreadNotifications > 0 && <span className="nav-count">{unreadNotifications}</span>}</NavLink>
+          <NavLink to="/support" onClick={() => setMenuOpen(false)} className="nav-link"><LifeBuoy size={18} strokeWidth={1.9} /><span>Support</span></NavLink>
+          {isModerator && <NavLink to="/console/moderation" onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}><Scale size={18} strokeWidth={1.9} /><span>Moderation</span></NavLink>}
         </nav>
 
         <div className="sidebar-footer">

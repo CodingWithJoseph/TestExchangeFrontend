@@ -70,7 +70,7 @@ export function PublicLayout() {
       <footer className="public-footer">
         <div className="public-container public-footer-inner">
           <div><span className="brand"><span className="brand-mark">T</span>TestExchange</span><p>Real software testing, rewarded fairly.</p></div>
-          <nav aria-label="Footer navigation"><Link to="/tests">Browse tests</Link><Link to="/how-it-works">How it works</Link><Link to="/login">Sign in</Link></nav>
+          <nav aria-label="Footer navigation"><Link to="/tests">Browse tests</Link><Link to="/how-it-works">How it works</Link><Link to="/terms">Terms</Link><Link to="/privacy">Privacy</Link><Link to="/acceptable-use">Acceptable use</Link><Link to="/support">Support</Link><Link to="/login">Sign in</Link></nav>
           <small>Private test materials stay between developers and accepted testers.</small>
         </div>
       </footer>

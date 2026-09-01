@@ -21,6 +21,24 @@ describe('API client', () => {
     expect(new Headers(init?.headers).has('Authorization')).toBe(false)
   })
 
+  it('checks public-beta capacity and joins the waitlist anonymously', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('{"enabled":true,"max_users":200,"claimed_seats":200,"remaining_seats":0,"is_full":true}', { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response('{"id":"wait-1","email":"new@example.com","created_at":"2026-09-01T00:00:00Z"}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+
+    const client = createApiClient(null, 'https://api.example.test')
+    const status = await client.getBetaStatus()
+    const entry = await client.joinBetaWaitlist('new@example.com')
+
+    expect(status.is_full).toBe(true)
+    expect(entry.email).toBe('new@example.com')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.example.test/beta/status',
+      'https://api.example.test/beta/waitlist',
+    ])
+    expect(fetchMock.mock.calls.every(([, init]) => !new Headers(init?.headers).has('Authorization'))).toBe(true)
+  })
+
   it('adds the Supabase bearer token to protected requests', async () => {
     fetchMock.mockResolvedValue(new Response('{"user_id":"user-1","balance":10}', { status: 200, headers: { 'Content-Type': 'application/json' } }))
 

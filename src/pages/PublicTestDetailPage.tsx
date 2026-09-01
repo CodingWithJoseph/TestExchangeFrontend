@@ -49,7 +49,7 @@ export function PublicTestDetailPage() {
       <header className="test-detail-header">
         <div className="public-container test-detail-header-inner">
           <div className="test-detail-title-block">
-            <div className="test-detail-project"><span className="app-icon large mint">{test.name.slice(0, 2).toUpperCase()}</span><div><span>{test.name}</span><small>{test.category} software test</small></div></div>
+            <div className="test-detail-project"><span className="app-icon large mint">{test.name.slice(0, 2).toUpperCase()}</span><div><span>{test.name}</span><small>Posted by {test.owner_profile.display_name} · @{test.owner_profile.username}</small></div></div>
             <h1>{test.name}</h1>
             <p>{test.public_summary}</p>
             <div className="community-tags">{campaignTags(test).map((tag) => <Link key={tag} to={`/tests?tag=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>
@@ -92,7 +92,7 @@ export function PublicTestDetailPage() {
           <section className="join-test-card">
             <span className="community-status open">Open</span>
             <h2>Request a tester spot</h2>
-            <p>The developer’s credits are reserved before the campaign opens. If accepted, review the locked private contract before you begin.</p>
+            <p>The developer spends the campaign credits before it opens. If accepted, review the locked private contract before you begin.</p>
             <div className="join-reward-line"><CircleDollarSign size={18} /><span><strong>Earn {test.reward_credits} credits</strong><small>after your submission is approved</small></span></div>
             <button className="button button-dark button-full" onClick={requestSpot}>{user ? 'Continue in workspace' : 'Sign in to request a spot'}</button>
             <small className="join-card-note"><LockKeyhole size={13} /> Private details appear only after acceptance.</small>

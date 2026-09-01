@@ -56,7 +56,7 @@ export function DashboardPage() {
       {error && <div className="form-error">{error}</div>}
 
       <section className="stats-grid" aria-label="Account overview">
-        <StatCard label="Available credits" value={String(balance)} detail="Ready to reserve or spend" icon={BadgeDollarSign} tone="green" />
+        <StatCard label="Available credits" value={String(balance)} detail="Ready to spend on a campaign" icon={BadgeDollarSign} tone="green" />
         <StatCard label="Tests completed" value={String(completedAsTester)} detail="Approved tester submissions" icon={CircleCheckBig} tone="purple" />
         <StatCard label="Active campaigns" value={String(campaigns.filter((item) => item.status === 'published').length)} detail="Currently recruiting testers" icon={Rocket} tone="orange" />
         <StatCard label="Testers helped" value={String(testersHelped)} detail="Approved on your campaigns" icon={Users} tone="blue" />
