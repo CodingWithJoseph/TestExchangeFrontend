@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAccount } from '../account/AccountContext'
+import { useAuth } from '../auth/AuthContext'
 import { useApi } from '../api/ApiContext'
 import {
   createCampaignDraft,
@@ -55,12 +56,14 @@ type ValidationErrors = Partial<Record<ValidationKey, string>>
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function NewCampaignPage() {
+  const { user } = useAuth()
+  const userId = user!.id
   const api = useApi()
   const { balance: availableCredits, refreshAccount } = useAccount()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const draftId = searchParams.get('draft')
-  const [draft, setDraft] = useState<CampaignDraft>(() => (draftId ? loadCampaignDraft(draftId) : undefined) ?? createCampaignDraft())
+  const [draft, setDraft] = useState<CampaignDraft>(() => (draftId ? loadCampaignDraft(userId, draftId) : undefined) ?? createCampaignDraft())
   const [step, setStep] = useState(1)
   const [furthestStep, setFurthestStep] = useState(1)
   const [newTask, setNewTask] = useState('')
@@ -115,7 +118,7 @@ export function NewCampaignPage() {
     setSaveState('saving')
     const autosaveTimer = window.setTimeout(() => {
       try {
-        saveCampaignDraft(draft)
+        saveCampaignDraft(userId, draft)
         setSaveState('saved')
       } catch {
         setSaveState('error')
@@ -123,7 +126,7 @@ export function NewCampaignPage() {
     }, 600)
 
     return () => window.clearTimeout(autosaveTimer)
-  }, [draft])
+  }, [draft, userId])
 
   const updateDraft = <Key extends keyof CampaignDraft>(key: Key, value: CampaignDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }))
@@ -207,7 +210,7 @@ export function NewCampaignPage() {
           tasks: draft.tasks.map((task) => ({ title: task.trim().slice(0, 160), instructions: task.trim(), evidence_required: true })),
         },
       })
-      deleteCampaignDraft(draft.id)
+      deleteCampaignDraft(userId, draft.id)
       await refreshAccount()
       navigate(`/console/my-campaigns/${campaign.id}`, { state: { createdCampaign: campaign.name } })
     } catch (requestError) {

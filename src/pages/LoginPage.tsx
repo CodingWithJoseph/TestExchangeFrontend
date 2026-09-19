@@ -1,6 +1,6 @@
 import { ArrowRight, FlaskConical, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useApi } from '../api/ApiContext'
 import type { BetaStatus } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -78,6 +78,7 @@ export function LoginPage() {
           {notice && <div className="inline-success">{notice}</div>}
           <button className="button button-dark button-full" disabled={submitting || (Boolean(configurationError) && !registrationUnavailable) || (mode === 'sign-up' && !betaStatus && !betaStatusError)}>{submitting ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : registrationUnavailable ? 'Join waitlist' : 'Create account'} <ArrowRight size={17} /></button>
         </form>
+        {mode === 'sign-in' && <p><Link to="/forgot-password">Forgot your password?</Link></p>}
         <div className="login-note"><ShieldCheck size={16} /><span>Authentication is handled by Supabase. TestExchange never receives your password.</span></div>
       </section>
     </main>

@@ -2,11 +2,13 @@ import { ArrowRight, CheckCircle2, Plus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useApi } from '../api/ApiContext'
+import { useAuth } from '../auth/AuthContext'
 import type { Assignment, Campaign } from '../api/types'
 import { PageHeader } from '../components/PageHeader'
 import { loadCampaignDrafts } from '../features/campaigns/campaignDraft'
 
 export function MyCampaignsPage() {
+  const { user } = useAuth()
   const api = useApi()
   const location = useLocation()
   const createdCampaign = (location.state as { createdCampaign?: string } | null)?.createdCampaign
@@ -14,7 +16,7 @@ export function MyCampaignsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const storedDrafts = loadCampaignDrafts()
+  const storedDrafts = user ? loadCampaignDrafts(user.id) : []
 
   useEffect(() => {
     let active = true

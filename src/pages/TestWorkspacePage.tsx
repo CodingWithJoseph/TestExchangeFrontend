@@ -12,6 +12,7 @@ import {
   validateEvidenceFile,
 } from '../features/testing/evidenceStorage'
 import { useAssignmentWorkspace } from '../features/testing/useAssignmentWorkspace'
+import { reviewIsOverdue } from '../features/testing/reviewDeadline'
 import { assignmentStatusClass, assignmentStatusLabel, formatDate } from '../features/testing/workflowFormat'
 
 function urlFrom(value: string | null | undefined) {
@@ -35,10 +36,16 @@ export function TestWorkspacePage() {
   const [sessionNote, setSessionNote] = useState('')
   const [recordingSession, setRecordingSession] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const latestSubmission = workspace?.submissions[0]
   const latestReview = workspace?.reviews.find((review) => review.submission_id === latestSubmission?.id)
   const dispute = workspace?.disputes[0]
+  const overdue = workspace?.assignment.status === 'submitted' && reviewIsOverdue(latestSubmission?.submitted_at, workspace?.contract?.review_window_hours, now)
 
   useEffect(() => {
     if (!workspace?.contract) return
@@ -229,9 +236,9 @@ export function TestWorkspacePage() {
             <div className="evidence-list">{latestSubmission.items.map((item) => { const task = contract?.tasks.find((entry) => entry.id === item.task_id); return <article key={item.id}><span><Check size={14} /></span><div><strong>{task?.title || 'Additional evidence'}</strong><p>{item.note || item.external_url || item.storage_key}</p></div></article> })}</div>
           </section>}
 
-          {assignment.status === 'rejected' && latestSubmission && <section className="workspace-panel dispute-panel">
-            <div className="workspace-panel-head"><div><span className="panel-icon orange"><Gavel size={18} /></span><span><strong>Contract dispute</strong><small>A moderator reviews the locked contract, evidence, messages, and original decision</small></span></div>{dispute && <span className={`status-pill ${dispute.status.replaceAll('_', '-')}`}>{dispute.status.replaceAll('_', ' ')}</span>}</div>
-            {dispute ? <div className="brief-box"><strong>{dispute.remedy === 'award_tester' ? 'Moderator awarded the tester' : dispute.status === 'rejected' ? 'Original rejection upheld' : 'Dispute submitted'}</strong><p>{dispute.resolution || dispute.reason}</p>{dispute.status === 'resolved' && dispute.remedy === 'award_tester' && <small>The assignment and submission were approved and {campaign.reward_credits} credits were awarded exactly once.</small>}</div> : <div className="decision-form danger"><label>Why does the evidence satisfy the locked contract?<textarea rows={5} value={disputeReason} maxLength={8000} onChange={(event) => setDisputeReason(event.target.value)} placeholder="Reference the exact contract task, submitted evidence, and the developer’s rejection reason." /></label><small>{disputeReason.trim().length < 20 ? 'Write at least 20 characters. One dispute may be opened for this assignment.' : 'A human moderator will review the complete private audit trail.'}</small><button className="button button-danger" disabled={disputeReason.trim().length < 20 || openingDispute} onClick={() => void openDispute()}>{openingDispute ? 'Opening dispute…' : 'Open contract dispute'}</button></div>}
+          {(assignment.status === 'rejected' || overdue || dispute) && latestSubmission && <section className="workspace-panel dispute-panel">
+            <div className="workspace-panel-head"><div><span className="panel-icon orange"><Gavel size={18} /></span><span><strong>Moderator review</strong><small>A moderator reviews the locked contract, evidence, messages, and any owner decision</small></span></div>{dispute && <span className={`status-pill ${dispute.status.replaceAll('_', '-')}`}>{dispute.status.replaceAll('_', ' ')}</span>}</div>
+            {dispute ? <div className="brief-box"><strong>{dispute.remedy === 'award_tester' ? 'Moderator awarded the tester' : dispute.status === 'rejected' ? 'Submission rejected' : 'Dispute submitted'}</strong><p>{dispute.resolution || dispute.reason}</p>{dispute.status === 'resolved' && dispute.remedy === 'award_tester' && <small>The assignment and submission were approved and {campaign.reward_credits} credits were awarded exactly once.</small>}</div> : <div className="decision-form danger"><label>Why does the evidence satisfy the locked contract?<textarea rows={5} value={disputeReason} maxLength={8000} onChange={(event) => setDisputeReason(event.target.value)} placeholder="Reference the contract tasks and evidence. Explain the rejection or overdue review." /></label><small>{disputeReason.trim().length < 20 ? 'Write at least 20 characters. One dispute may be opened for this assignment.' : 'A human moderator will review the complete private audit trail.'}</small><button className="button button-danger" disabled={disputeReason.trim().length < 20 || openingDispute} onClick={() => void openDispute()}>{openingDispute ? 'Opening dispute…' : 'Request moderator review'}</button></div>}
           </section>}
         </div>
 

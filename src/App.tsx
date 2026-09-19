@@ -10,6 +10,7 @@ import { CommunityTagsPage } from './pages/CommunityTagsPage'
 import { CreditsPage } from './pages/CreditsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
+import { PasswordRecoveryPage } from './pages/PasswordRecoveryPage'
 import { MyCampaignsPage } from './pages/MyCampaignsPage'
 import { MyTestsPage } from './pages/MyTestsPage'
 import { ModerationPage } from './pages/ModerationPage'
@@ -40,6 +41,8 @@ export function App() {
         <Route path="support" element={<SupportPage />} />
       </Route>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<PasswordRecoveryPage key="request" />} />
+      <Route path="/reset-password" element={<PasswordRecoveryPage key="update" updating />} />
       <Route element={<RequireAuth />}>
         <Route element={<RequireAccount />}>
           <Route path="/console" element={<ConsoleLayout />}>

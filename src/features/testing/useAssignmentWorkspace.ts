@@ -34,7 +34,7 @@ export function useAssignmentWorkspace(assignmentId: string | undefined) {
         api.listTestingSessions(assignmentId),
       ])
       const isOwner = campaign.owner_id === user.id
-      const contract = assignment.status === 'applied' && !isOwner
+      const contract = !assignment.accepted_at && !isOwner
         ? null
         : await (isOwner ? api.getOwnedContract(campaign.id) : api.getAssignmentContract(assignment.id))
       const reviews = (await Promise.all(submissions.map((submission) => api.listReviews(submission.id)))).flat()

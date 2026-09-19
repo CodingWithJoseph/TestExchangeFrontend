@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "verify:release": "node scripts/verify-release.mjs",
+    "build:release": "npm run verify:release && npm run build",
     "check": "tsc --noEmit",
     "test": "vitest run"
   },

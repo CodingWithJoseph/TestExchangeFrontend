@@ -31,7 +31,10 @@ export type CampaignDraft = {
   updatedAt: string
 }
 
-const storageKey = 'testexchange.campaign-drafts.v1'
+function storageKey(userId: string) {
+  if (!userId) throw new Error('Sign in before accessing campaign drafts.')
+  return `testexchange.campaign-drafts.v2.${userId}`
+}
 
 export function createCampaignDraft(): CampaignDraft {
   return {
@@ -90,21 +93,22 @@ function normalizeCampaignDraft(stored: LegacyCampaignDraft): CampaignDraft {
   }
 }
 
-export function loadCampaignDrafts(): CampaignDraft[] {
+export function loadCampaignDrafts(userId: string): CampaignDraft[] {
   try {
-    const stored = window.localStorage.getItem(storageKey)
+    // Legacy v1 drafts have no owner: never assign them to the next signed-in user.
+    const stored = window.localStorage.getItem(storageKey(userId))
     return stored ? (JSON.parse(stored) as LegacyCampaignDraft[]).map(normalizeCampaignDraft) : []
   } catch {
     return []
   }
 }
 
-export function loadCampaignDraft(id: string) {
-  return loadCampaignDrafts().find((campaign) => campaign.id === id)
+export function loadCampaignDraft(userId: string, id: string) {
+  return loadCampaignDrafts(userId).find((campaign) => campaign.id === id)
 }
 
-export function saveCampaignDraft(draft: CampaignDraft) {
-  const campaigns = loadCampaignDrafts()
+export function saveCampaignDraft(userId: string, draft: CampaignDraft) {
+  const campaigns = loadCampaignDrafts(userId)
   const nextDraft = { ...draft, updatedAt: new Date().toISOString() }
   const existingIndex = campaigns.findIndex((campaign) => campaign.id === draft.id)
 
@@ -114,11 +118,11 @@ export function saveCampaignDraft(draft: CampaignDraft) {
     campaigns.unshift(nextDraft)
   }
 
-  window.localStorage.setItem(storageKey, JSON.stringify(campaigns))
+  window.localStorage.setItem(storageKey(userId), JSON.stringify(campaigns))
   return nextDraft
 }
 
-export function deleteCampaignDraft(id: string) {
-  const campaigns = loadCampaignDrafts().filter((campaign) => campaign.id !== id)
-  window.localStorage.setItem(storageKey, JSON.stringify(campaigns))
+export function deleteCampaignDraft(userId: string, id: string) {
+  const campaigns = loadCampaignDrafts(userId).filter((campaign) => campaign.id !== id)
+  window.localStorage.setItem(storageKey(userId), JSON.stringify(campaigns))
 }

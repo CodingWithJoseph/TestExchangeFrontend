@@ -94,6 +94,7 @@ export function createApiClient(accessToken: string | null, apiUrl = import.meta
     openDispute: (assignmentId: string, submissionId: string, reason: string) => request<Dispute>(`/api/v1/assignments/${assignmentId}/disputes`, { method: 'POST', body: json({ submission_id: submissionId, reason }) }),
     listModerationDisputes: () => request<Dispute[]>('/api/v1/moderation/disputes'),
     getModerationCase: (disputeId: string) => request<ModerationCase>(`/api/v1/moderation/disputes/${disputeId}`),
+    getModerationEvidenceUrl: (disputeId: string, evidenceId: string) => request<{ url: string; expires_in: number }>(`/api/v1/moderation/disputes/${disputeId}/evidence/${evidenceId}/url`, { method: 'POST' }),
     claimDispute: (disputeId: string) => request<Dispute>(`/api/v1/moderation/disputes/${disputeId}/claim`, { method: 'POST' }),
     resolveDispute: (disputeId: string, outcome: 'resolved' | 'rejected', remedy: DisputeRemedy, resolution: string) => request<Dispute>(`/api/v1/moderation/disputes/${disputeId}/resolve`, { method: 'POST', body: json({ outcome, remedy, resolution }) }),
     listModerationParticipants: () => request<ModerationParticipant[]>('/api/v1/moderation/participants'),
