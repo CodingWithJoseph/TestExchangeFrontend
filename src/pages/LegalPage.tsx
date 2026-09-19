@@ -23,7 +23,7 @@ export function TermsPage() {
     <h2>5. Content and privacy</h2>
     <p>You retain ownership of your content and give TestExchange the limited permission needed to host, process, display, and moderate it to operate the service. Do not upload secrets or personal data that are unnecessary for the test. Public campaign briefs and public profile fields can be seen by anyone; private contracts, evidence, and messages are limited to relevant participants and authorized moderators.</p>
     <h2>6. Disputes and service changes</h2>
-    <p>Testers may dispute an explicit rejection. A moderator may review the locked contract, evidence, messages, and audit history and may uphold the rejection or award the tester once. We may change, limit, or discontinue beta features and will use reasonable care to preserve active work.</p>
+    <p>Testers may dispute an explicit rejection or escalate a submission after its review window expires. A moderator may review the locked contract, evidence, messages, and audit history and may uphold the rejection or award the tester once. We may change, limit, or discontinue beta features and will use reasonable care to preserve active work.</p>
     <h2>7. Warranty and liability</h2>
     <p>The beta is provided “as is” and “as available” to the extent permitted by law. TestExchange is not responsible for third-party software, lost marketplace opportunities, or indirect or consequential loss. Nothing here excludes rights or liability that cannot legally be excluded.</p>
     <p>Also read the <Link to="/acceptable-use">Acceptable Use Policy</Link> and <Link to="/privacy">Privacy Notice</Link>.</p>
@@ -67,7 +67,7 @@ export function SupportPage() {
     <h2>Account and privacy requests</h2>
     <p>Use the subject “Account request” for profile correction, data export, or account deletion. We may need to verify that the request comes from the account owner. Transaction, audit, security, or dispute records may need to be retained.</p>
     <h2>Campaign or safety issues</h2>
-    <p>For an active campaign, include the campaign or assignment ID and explain whether the issue concerns access, evidence, review, credits, or participant safety. Use the in-product dispute flow only after submitted work has been explicitly rejected.</p>
+    <p>For an active campaign, include the campaign or assignment ID and explain whether the issue concerns access, evidence, review, credits, or participant safety. Use the in-product moderator review flow after a rejection or when the agreed review window has expired.</p>
     <h2>Beta expectations</h2>
     <p>Support is handled manually during the beta and no response-time guarantee is offered yet. Urgent security reports should be clearly marked “Security.”</p>
   </PolicyPage>

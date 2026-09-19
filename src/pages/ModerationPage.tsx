@@ -6,6 +6,7 @@ import { useApi } from '../api/ApiContext'
 import type { Dispute, ModerationCase, ModerationParticipant, WaitlistEntry } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { PageHeader } from '../components/PageHeader'
+import { ModerationAttachment } from '../components/ModerationAttachment'
 import { formatDate } from '../features/testing/workflowFormat'
 
 type ResolutionAction = 'award_tester' | 'uphold_rejection'
@@ -153,14 +154,15 @@ export function ModerationPage() {
             <div className="panel-header"><div><span className="section-kicker">{selectedCase.campaign.name}</span><h2>{selectedCase.assignment.tester_profile.display_name}</h2><small>@{selectedCase.assignment.tester_profile.username}</small></div><span className={`status-pill ${selectedCase.dispute.status.replaceAll('_', '-')}`}>{selectedCase.dispute.status.replaceAll('_', ' ')}</span></div>
             <div className="brief-box"><strong>Tester’s dispute</strong><p>{selectedCase.dispute.reason}</p></div>
             <div className="campaign-contract-view"><section><span>LOCKED CONTRACT TASKS</span><ol>{selectedCase.contract.tasks.map((task) => <li key={task.id}><strong>{task.title}</strong><p>{task.instructions}</p></li>)}</ol></section></div>
-            {selectedCase.submissions.map((submission) => <section className="moderation-submission" key={submission.id}><strong>Submission version {submission.version}</strong><p>{submission.summary}</p>{submission.items.map((item) => <div key={item.id}>{item.note || item.external_url || item.storage_key}</div>)}</section>)}
+            {selectedCase.submissions.map((submission) => <section className="moderation-submission" key={submission.id}><strong>Submission version {submission.version}</strong><p>{submission.summary}</p>{submission.items.map((item) => <div key={item.id}>{item.note && <p>{item.note}</p>}{item.external_url && <p>{item.external_url}</p>}{item.storage_key && <ModerationAttachment key={`${selectedCase.dispute.id}:${item.id}`} disputeId={selectedCase.dispute.id} evidenceId={item.id} />}</div>)}</section>)}
+            <details><summary>Private conversation and activity</summary>{selectedCase.messages.map((message) => <p key={message.id}>{formatDate(message.created_at)} · {message.body}</p>)}{selectedCase.audit_events.map((event) => <p key={event.id}>{formatDate(event.created_at)} · {event.action}</p>)}</details>
             {selectedCase.reviews.map((review) => <div className="review-outcome escalated" key={review.id}><ShieldAlert size={18} /><div><strong>Owner decision: {review.decision.replaceAll('_', ' ')}</strong><p>{review.notes}</p></div></div>)}
 
             {selectedCase.dispute.status === 'open' && <button className="button button-dark" disabled={saving} onClick={() => void claim()}>{saving ? 'Claiming…' : 'Claim this case'}</button>}
             {selectedCase.dispute.status === 'under_review' && assignedToCurrentModerator && <div className="decision-form">
               <div className="moderation-actions">
                 <label className={`decision-button approve ${resolutionAction === 'award_tester' ? 'selected' : ''}`}><input type="radio" checked={resolutionAction === 'award_tester'} onChange={() => setResolutionAction('award_tester')} /><CheckCircle2 size={18} /><span><strong>Award tester</strong><small>Approve work and issue the promised reward once</small></span></label>
-                <label className={`decision-button danger ${resolutionAction === 'uphold_rejection' ? 'selected' : ''}`}><input type="radio" checked={resolutionAction === 'uphold_rejection'} onChange={() => setResolutionAction('uphold_rejection')} /><ShieldAlert size={18} /><span><strong>Uphold rejection</strong><small>No credit movement</small></span></label>
+                <label className={`decision-button danger ${resolutionAction === 'uphold_rejection' ? 'selected' : ''}`}><input type="radio" checked={resolutionAction === 'uphold_rejection'} onChange={() => setResolutionAction('uphold_rejection')} /><ShieldAlert size={18} /><span><strong>{selectedCase.assignment.status === 'submitted' ? 'Reject submission' : 'Uphold rejection'}</strong><small>No credit movement</small></span></label>
               </div>
               <label>Moderator resolution<textarea rows={5} value={resolution} onChange={(event) => setResolution(event.target.value)} placeholder="Reference the locked task, evidence, and reason for the final outcome." /></label>
               <small>{resolution.trim().length < 20 ? 'Write at least 20 characters.' : 'This explanation is final and visible to both participants.'}</small>

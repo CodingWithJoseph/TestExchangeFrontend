@@ -34,6 +34,8 @@ npm run check
 npm run dev
 ```
 
+For production deployment and the hosted smoke test, follow [the website release runbook](docs/web-release.md).
+
 Quality checks:
 
 ```bash
@@ -81,6 +83,6 @@ Run the backend on port `8000` and this Vite application on port `5173`. For loc
 
 Campaigns, assignments, contracts, submissions, reviews, messages, profiles, and credit ledgers now come from the backend API. Unpublished campaign drafts remain in browser storage so the builder can autosave before anything is sent to the backend. Credit purchases are placeholders; there are no subscriptions.
 
-Tester evidence uploads go directly to the private Supabase Storage bucket named `test-evidence`. Apply `../TestExchangeBackend/docs/supabase-storage-policies.sql` in the Supabase SQL editor before testing uploads. The frontend only stores the assignment-scoped storage key in the submission; reviewer links are short-lived signed URLs, and evidence is never made public. The current client accepts PNG, JPEG, WebP, MP4, TXT, PDF, and ZIP files up to 50 MB each.
+Tester evidence uploads go directly to the private Supabase Storage bucket named `test-evidence`. Apply `../TestExchangeBackend/docs/supabase-storage-policies.sql` in the Supabase SQL editor before testing uploads. The frontend only stores the assignment-scoped storage key in the submission; reviewer links are short-lived signed URLs, and evidence is never made public. The current client accepts PNG, JPEG, WebP, MP4, and TXT files up to 50 MB each. Moderators open case attachments through the backend's audited, short-lived URL endpoint.
 
 Submission review calls the backend advisory quality-check endpoint when it is available. The checks highlight missing or incomplete evidence, but never approve, reject, or transfer credits. Google Play does not require a fixed screenshot count for a closed test; the product therefore captures the durable baseline reviewers need to explain tester engagement, feature/task coverage, feedback, changes made, and production readiness. Photos are supporting evidence rather than automatic proof.

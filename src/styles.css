@@ -1815,6 +1815,53 @@ h3,
   text-align: left;
 }
 
+.login-form {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.login-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.login-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.login-form input:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.login-card .form-error,
+.login-card .inline-success {
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.login-card .form-error {
+  color: #8c2929;
+  background: #fff1f1;
+}
+
 .login-note svg {
   flex: 0 0 auto;
   color: var(--green);
